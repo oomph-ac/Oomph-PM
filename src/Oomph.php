@@ -110,7 +110,12 @@ class Oomph extends PluginBase implements Listener {
         return false;
     }
 
-    /** @priority HIGHEST */
+
+    /**
+     * @param PlayerPreLoginEvent $event
+     * @priority HIGHEST
+     * @ignoreCancelled true
+     */
     public function onPreLogin(PlayerPreLoginEvent $event): void {
         $ref = (new \ReflectionClass($event))->getProperty("playerInfo");
         /** @var PlayerInfo $playerInfo */
@@ -127,8 +132,6 @@ class Oomph extends PluginBase implements Listener {
             $extraData,
         );
         $ref->setValue($event, $playerInfo);
-
-        var_dump($event->getPlayerInfo() instanceof XboxLivePlayerInfo);
     }
 
     public function onLogin(PlayerLoginEvent $event): void {
