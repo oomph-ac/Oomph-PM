@@ -1,0 +1,5 @@
+Version: "1.0.0"
+
+# Prefix for Oomph.
+Prefix: "§7§l[§eoomph§7]§r"
+FlaggedMessage: "{prefix} §d{player} §7flagged §4{check_main} §7(§c{check_sub}§7) §7[§5x{violations}§7]"

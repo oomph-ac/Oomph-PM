@@ -1,0 +1,20 @@
+---
+name: Oomph
+version: 1.0.0
+main: ethaniccc\Oomph\Oomph
+api: 5.8.2
+src-namespace-prefix: ethaniccc\Oomph
+permissions:
+  Oomph.Alerts:
+    description: Allows access to alerts on Oomph.
+    default: op
+commands:
+  oalerts:
+    description: Toggle Oomph alerts on/off.
+    usage: "/oalerts"
+    permission: Oomph.Alerts
+  odelay:
+    description: Changes how long the delay of alerts from Oomph are.
+    usage: "/odelay <seconds>"
+    permission: Oomph.Alerts
+...
