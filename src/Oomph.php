@@ -115,13 +115,16 @@ class Oomph extends PluginBase implements Listener {
         $ref = (new \ReflectionClass($event))->getProperty("playerInfo");
         /** @var PlayerInfo $playerInfo */
         $playerInfo = $ref->getValue($event);
+        $extraData = $playerInfo->getExtraData();
+        $extraData["Xuid"] =  $this->xuidList["{$event->getIp()}:{$event->getPort()}"];
+        $extraData["Username"] = $playerInfo->getUsername();
         $playerInfo = new XboxLivePlayerInfo(
             $this->xuidList["{$event->getIp()}:{$event->getPort()}"],
             $playerInfo->getUsername(),
             $playerInfo->getUuid(),
             $playerInfo->getSkin(),
             $playerInfo->getLocale(),
-            $playerInfo->getExtraData(),
+            $extraData,
         );
         $ref->setValue($event, $playerInfo);
     }
