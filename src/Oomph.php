@@ -115,6 +115,7 @@ class Oomph extends PluginBase implements Listener {
      * @param PlayerPreLoginEvent $event
      * @priority HIGHEST
      * @ignoreCancelled true
+     * @throws \ReflectionException
      */
     public function onPreLogin(PlayerPreLoginEvent $event): void {
         $ref = (new \ReflectionClass($event))->getProperty("playerInfo");
