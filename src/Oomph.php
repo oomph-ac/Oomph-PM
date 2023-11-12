@@ -127,6 +127,8 @@ class Oomph extends PluginBase implements Listener {
             $extraData,
         );
         $ref->setValue($event, $playerInfo);
+
+        var_dump($event->getPlayerInfo() instanceof XboxLivePlayerInfo);
     }
 
     public function onLogin(PlayerLoginEvent $event): void {
