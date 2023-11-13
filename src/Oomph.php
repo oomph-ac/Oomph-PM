@@ -49,6 +49,11 @@ class Oomph extends PluginBase implements Listener {
             $this->reloadConfig();
         }
 
+        if (!$this->getConfig()->get("Enabled", true)) {
+            $this->getLogger()->warning("Oomph set to disabled in config");
+            return;
+        }
+
         $this->getScheduler()->scheduleRepeatingTask(new ClosureTask(function(): void {
             $this->alerted = [];
             foreach ($this->getServer()->getOnlinePlayers() as $player) {

@@ -1,4 +1,5 @@
 Version: "1.0.0"
+Enabled: true
 
 # Prefix for Oomph.
 Prefix: "§7§l[§eoomph§7]§r"
