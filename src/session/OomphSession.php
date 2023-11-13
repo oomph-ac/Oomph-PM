@@ -27,7 +27,6 @@ class OomphSession {
 
     public bool $alertsEnabled = false;
     public float $alertDelay = 0;
-
     public float $lastAlert = 0;
 
     public function __construct(Player $player) {
