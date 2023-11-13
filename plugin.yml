@@ -2,7 +2,7 @@
 name: Oomph
 version: 1.0.0
 main: ethaniccc\Oomph\Oomph
-api: 5.8.2
+api: 5.0.0
 src-namespace-prefix: ethaniccc\Oomph
 permissions:
   Oomph.Alerts:
