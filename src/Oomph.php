@@ -152,7 +152,14 @@ class Oomph extends PluginBase implements Listener {
 
     public function onLogin(PlayerLoginEvent $event): void {
         $player = $event->getPlayer();
-        (new \ReflectionClass($player))->getProperty("xuid")->setValue($player, $this->xuidList["{$player->getNetworkSession()->getIp()}:{$player->getNetworkSession()->getPort()}"]);
+		$xuid = $this->xuidList["{$player->getNetworkSession()->getIp()}:{$player->getNetworkSession()->getPort()}"] ?? null;
+		if ($xuid === null) {
+			$event->setKickMessage("failed to initialize session - please try logging in again.");
+			$event->cancel();
+			return;
+		}
+
+        (new \ReflectionClass($player))->getProperty("xuid")->setValue($player, $xuid);
         unset($this->xuidList["{$player->getNetworkSession()->getIp()}:{$player->getNetworkSession()->getPort()}"]);
 
         OomphSession::register($player);
@@ -185,6 +192,7 @@ class Oomph extends PluginBase implements Listener {
         switch ($eventType) {
             case "oomph:authentication":
                 $this->xuidList[$event->getOrigin()->getIp() . ":" . $event->getOrigin()->getPort()] = $data["xuid"];
+	            (new \ReflectionClass($event->getOrigin()))->getProperty("ip")->setValue($event->getOrigin(), explode(":", $data["address"])[0]);
                 break;
             case "oomph:latency_report":
                 if ($player === null) {
@@ -204,7 +212,6 @@ class Oomph extends PluginBase implements Listener {
                     [$this->getConfig()->get("Prefix", "§l§7[§eoomph§7]"), $data["player"], $data["check_main"], $data["check_sub"], $data["violations"]],
                     $message
                 );
-
                 $ev = new OomphViolationEvent($player, $data["check_main"], $data["check_sub"], round($data["violations"], 2));
                 $ev->call();
 
