@@ -8,6 +8,9 @@ permissions:
   Oomph.Alerts:
     description: Allows access to alerts on Oomph.
     default: op
+  Oomph.Logs:
+    description: Allows access to logs on Oomph.
+    default: op
 commands:
   oalerts:
     description: Toggle Oomph alerts on/off.
@@ -17,4 +20,8 @@ commands:
     description: Changes how long the delay of alerts from Oomph are.
     usage: "/odelay <seconds>"
     permission: Oomph.Alerts
+  ologs:
+    description: Displays the checks that the specified player has failed on Oomph.
+    usage: "/ologs <player>"
+    permission: Oomph.Logs
 ...
