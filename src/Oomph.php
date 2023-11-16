@@ -123,6 +123,10 @@ class Oomph extends PluginBase implements Listener {
      * @throws \ReflectionException
      */
     public function onPreLogin(PlayerPreLoginEvent $event): void {
+		if ($this->getConfig()->get("Allow-NonOomph-Conn") && $event->getPlayerInfo() instanceof XboxLivePlayerInfo) {
+			return;
+		}
+
         // Kick the player if data has not been received from Oomph validating their login.
         if (!isset($this->xuidList["{$event->getIp()}:{$event->getPort()}"])) {
             $event->setKickFlag(
@@ -148,18 +152,31 @@ class Oomph extends PluginBase implements Listener {
             $extraData,
         );
         $ref->setValue($event, $playerInfo);
+		$event->setAuthRequired(false);
     }
 
+	/**
+	 * @priority HIGHEST
+	 * @param PlayerLoginEvent $event
+	 * @return void
+	 * @throws \ReflectionException
+	 */
     public function onLogin(PlayerLoginEvent $event): void {
         $player = $event->getPlayer();
 		$xuid = $this->xuidList["{$player->getNetworkSession()->getIp()}:{$player->getNetworkSession()->getPort()}"] ?? null;
 		if ($xuid === null) {
+			if ($this->getConfig()->get("Allow-NonOomph-Conn")) {
+				return;
+			}
+
 			$event->setKickMessage("failed to initialize session - please try logging in again.");
 			$event->cancel();
 			return;
 		}
 
-        (new \ReflectionClass($player))->getProperty("xuid")->setValue($player, $xuid);
+		$ref = new \ReflectionClass($player);
+        $ref->getProperty("xuid")->setValue($player, $xuid);
+		$ref->getProperty("authenticated")->setValue($player, true);
         unset($this->xuidList["{$player->getNetworkSession()->getIp()}:{$player->getNetworkSession()->getPort()}"]);
 
         OomphSession::register($player);
@@ -169,7 +186,12 @@ class Oomph extends PluginBase implements Listener {
         OomphSession::unregister($event->getPlayer());
     }
 
-    /** @priority HIGHEST */
+	/**
+	 * @priority HIGHEST
+	 * @param DataPacketReceiveEvent $event
+	 * @return void
+	 * @throws \ReflectionException'
+	 */
     public function onClientPacket(DataPacketReceiveEvent $event): void {
         $player = $event->getOrigin()->getPlayer();
         $packet = $event->getPacket();
@@ -191,6 +213,11 @@ class Oomph extends PluginBase implements Listener {
         $event->cancel();
         switch ($eventType) {
             case "oomph:authentication":
+				if ($player !== null) {
+					$this->getLogger()->warning("invalid authentication attempt from {$event->getOrigin()->getIp()}:{$event->getOrigin()->getPort()}");
+					return;
+				}
+
                 $this->xuidList[$event->getOrigin()->getIp() . ":" . $event->getOrigin()->getPort()] = $data["xuid"];
 	            (new \ReflectionClass($event->getOrigin()))->getProperty("ip")->setValue($event->getOrigin(), explode(":", $data["address"])[0]);
                 break;
@@ -199,12 +226,20 @@ class Oomph extends PluginBase implements Listener {
                     return;
                 }
 
+				if (OomphSession::get($player) === null) {
+					return;
+				}
+
                 $player->getNetworkSession()->updatePing((int) $data["raknet"]);
                 break;
             case "oomph:flagged":
                 if ($player === null) {
                     return;
                 }
+
+	            if (OomphSession::get($player) === null) {
+		            return;
+	            }
 
                 $message = $this->getConfig()->get("FlaggedMessage", "{prefix} §d{player} §7flagged §4{check_main} §7(§c{check_sub}§7) §7[§5x{violations}§7]");
                 $message = str_replace(
