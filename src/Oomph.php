@@ -272,9 +272,8 @@ class Oomph extends PluginBase implements Listener {
 					$this->getLogger()->warning("invalid authentication attempt from {$event->getOrigin()->getIp()}:{$event->getOrigin()->getPort()}");
 					return;
 				}
-
-				$this->xuidList[$event->getOrigin()->getIp() . ":" . $event->getOrigin()->getPort()] = $data["xuid"];
 				(new ReflectionClass($event->getOrigin()))->getProperty("ip")->setValue($event->getOrigin(), explode(":", $data["address"])[0]);
+				$this->xuidList[$event->getOrigin()->getIp() . ":" . $event->getOrigin()->getPort()] = $data["xuid"];
 				break;
 			case "oomph:latency_report":
 				if ($player === null) {
