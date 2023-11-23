@@ -115,12 +115,6 @@ class Oomph extends PluginBase implements Listener {
 					return true;
 				}
 
-				$session = OomphSession::get($sender);
-				if ($session === null) {
-					$sender->sendMessage(TextFormat::RED . "Unexpected null session.");
-					return true;
-				}
-
 				$arg = $args[0] ?? null;
 				if ($arg === null) {
 					$sender->sendMessage(TextFormat::RED . "Please specify a player to obtain their logs.");
