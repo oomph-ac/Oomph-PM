@@ -286,6 +286,13 @@ class Oomph extends PluginBase implements Listener {
 					$this->getLogger()->warning("invalid authentication attempt from {$event->getOrigin()->getIp()}:{$event->getOrigin()->getPort()}");
 					return;
 				}
+
+				if (!$this->getConfig()->get("Allow-NonOomph-Conn") && !in_array($event->getOrigin()->getIp(), $this->getConfig()->get("Allowed-Connections", ["127.0.0.1"]))) {
+					$this->getLogger()->warning("invalid connection from {$event->getOrigin()->getIp()} with XUID " . $data["xuid"]);
+					$event->getOrigin()->disconnect("invalid connection [error: 1]");
+					return;
+				}
+
 				$netRef = new ReflectionClass($event->getOrigin());
 				$netRef->getProperty("ip")->setValue($event->getOrigin(), explode(":", $data["address"])[0]);
 				$netRef->getProperty("packetBatchLimiter")->setValue($event->getOrigin(), new PacketRateLimiter("Packet Batches", 100, 1_000));
