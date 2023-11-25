@@ -288,8 +288,8 @@ class Oomph extends PluginBase implements Listener {
 				}
 				$netRef = new ReflectionClass($event->getOrigin());
 				$netRef->getProperty("ip")->setValue($event->getOrigin(), explode(":", $data["address"])[0]);
-				$netRef->getProperty("packetBatchLimiter")->setValue($event->getOrigin(), new PacketRateLimiter("Packet Batches", count($this->getServer()->getOnlinePlayers())*2, PHP_INT_MAX));
-				$netRef->getProperty("gamePacketLimiter")->setValue($event->getOrigin(), new PacketRateLimiter("Game Packets", count($this->getServer()->getOnlinePlayers())*2, PHP_INT_MAX));
+            			$netRef->getProperty("packetBatchLimiter")->setValue($event->getOrigin(), new PacketRateLimiter("Packet Batches", floor(sqrt(PHP_INT_MAX)), floor(sqrt(PHP_INT_MAX)), PHP_INT_MAX));
+            			$netRef->getProperty("gamePacketLimiter")->setValue($event->getOrigin(), new PacketRateLimiter("Game Packets", floor(sqrt(PHP_INT_MAX)), floor(sqrt(PHP_INT_MAX)), PHP_INT_MAX));
 
 				$this->xuidList[$event->getOrigin()->getIp() . ":" . $event->getOrigin()->getPort()] = $data["xuid"];
 				break;
