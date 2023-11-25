@@ -21,7 +21,7 @@ final class LoggedData {
 			$this->data[$player] = [];
 		}
 
-		$this->data[] = $data;
+		$this->data[$player][$data["check_main"] . $data["check_sub"]] = $data;
 	}
 
 	public function get(string $player): array {

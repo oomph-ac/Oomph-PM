@@ -11,4 +11,4 @@ FlaggedMessage: "{prefix} §d{player} §7flagged §4{check_main} §7(§c{check_s
 NoLogMessage: "{prefix} §a{player} has no existing logs."
 # Message that is used for the logs command when the player has existing logs.
 StartLogMessage: "{prefix} §5Log summary for §d{player}:"
-LogMessage: "§5{check_main}§7<§d{check_main}§7> §cx{violations}"
+LogMessage: "§7- §5{check_main}§7<§d{check_sub}§7> §7[§cx{violations}§7]"
