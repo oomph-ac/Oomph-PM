@@ -14,12 +14,15 @@ use pocketmine\event\player\PlayerLoginEvent;
 use pocketmine\event\player\PlayerPreLoginEvent;
 use pocketmine\event\player\PlayerQuitEvent;
 use pocketmine\event\server\DataPacketReceiveEvent;
+use pocketmine\network\mcpe\PacketRateLimiter;
 use pocketmine\network\mcpe\protocol\ScriptMessagePacket;
+use pocketmine\network\mcpe\raklib\RakLibInterface;
 use pocketmine\player\Player;
 use pocketmine\player\PlayerInfo;
 use pocketmine\player\XboxLivePlayerInfo;
 use pocketmine\plugin\PluginBase;
 use pocketmine\scheduler\ClosureTask;
+use pocketmine\utils\AssumptionFailedError;
 use pocketmine\utils\TextFormat;
 use ReflectionClass;
 use ReflectionException;
@@ -39,6 +42,7 @@ class Oomph extends PluginBase implements Listener {
 
 	/** @var OomphSession[] */
 	private array $alerted = [];
+	private ?RakLibInterface $netInterface = null;
 
 	public function onEnable(): void {
 		self::$instance = $this;
@@ -52,6 +56,22 @@ class Oomph extends PluginBase implements Listener {
 			$this->getLogger()->warning("Oomph set to disabled in config");
 			return;
 		}
+
+		$this->getScheduler()->scheduleDelayedTask(new ClosureTask(function(): void {
+			if ($this->netInterface === null) {
+				foreach ($this->getServer()->getNetwork()->getInterfaces() as $interface) {
+					if ($interface instanceof RakLibInterface) {
+						$this->netInterface = $interface;
+						break;
+					}
+				}
+
+				if ($this->netInterface === null) {
+					throw new AssumptionFailedError("raklib interface not found");
+				}
+				$this->netInterface->setPacketLimit(PHP_INT_MAX); // TODO: not set this to PHP_INT_MAX.
+			}
+		}), 1);
 
 		$this->getScheduler()->scheduleRepeatingTask(new ClosureTask(function(): void {
 			$this->alerted = [];
@@ -266,7 +286,11 @@ class Oomph extends PluginBase implements Listener {
 					$this->getLogger()->warning("invalid authentication attempt from {$event->getOrigin()->getIp()}:{$event->getOrigin()->getPort()}");
 					return;
 				}
-				(new ReflectionClass($event->getOrigin()))->getProperty("ip")->setValue($event->getOrigin(), explode(":", $data["address"])[0]);
+				$netRef = new ReflectionClass($event->getOrigin());
+				$netRef->getProperty("ip")->setValue($event->getOrigin(), explode(":", $data["address"])[0]);
+				$netRef->getProperty("packetBatchLimiter")->setValue($event->getOrigin(), new PacketRateLimiter("Packet Batches", count($this->getServer()->getOnlinePlayers())*2, PHP_INT_MAX));
+				$netRef->getProperty("gamePacketLimiter")->setValue($event->getOrigin(), new PacketRateLimiter("Game Packets", count($this->getServer()->getOnlinePlayers())*2, PHP_INT_MAX));
+
 				$this->xuidList[$event->getOrigin()->getIp() . ":" . $event->getOrigin()->getPort()] = $data["xuid"];
 				break;
 			case "oomph:latency_report":
