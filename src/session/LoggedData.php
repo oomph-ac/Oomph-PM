@@ -1,6 +1,6 @@
 <?php
 
-namespace Oomph\src\session;
+namespace ethaniccc\Oomph\session;
 
 final class LoggedData {
 
