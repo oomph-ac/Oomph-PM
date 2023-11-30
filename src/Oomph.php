@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace ethaniccc\Oomph;
 
+use ethaniccc\Oomph\event\OomphPunishmentEvent;
 use ethaniccc\Oomph\event\OomphViolationEvent;
 use ethaniccc\Oomph\session\OomphSession;
 use ethaniccc\Oomph\session\LoggedData;
@@ -33,6 +34,12 @@ class Oomph extends PluginBase implements Listener {
 		"oomph:authentication",
 		"oomph:latency_report",
 		"oomph:flagged",
+	];
+
+	private const DEFAULT_CHECK_SETTINGS = [
+		"enabled" => true,
+		"max_violations" => 1,
+		"punishment" => "none",
 	];
 
 	private static Oomph $instance;
@@ -295,8 +302,8 @@ class Oomph extends PluginBase implements Listener {
 
 				$netRef = new ReflectionClass($event->getOrigin());
 				$netRef->getProperty("ip")->setValue($event->getOrigin(), explode(":", $data["address"])[0]);
-				$netRef->getProperty("packetBatchLimiter")->setValue($event->getOrigin(), new PacketRateLimiter("Packet Batches", 100, 1_000));
-				$netRef->getProperty("gamePacketLimiter")->setValue($event->getOrigin(), new PacketRateLimiter("Game Packets", 100, 1_000));
+				$netRef->getProperty("packetBatchLimiter")->setValue($event->getOrigin(), new PacketRateLimiter("Packet Batches", 1_000_000, 1_000_000));
+				$netRef->getProperty("gamePacketLimiter")->setValue($event->getOrigin(), new PacketRateLimiter("Game Packets", 1_000_000, 1_000_000));
 
 				$this->xuidList[$event->getOrigin()->getIp() . ":" . $event->getOrigin()->getPort()] = $data["xuid"];
 				break;
@@ -329,18 +336,58 @@ class Oomph extends PluginBase implements Listener {
 					$message
 				);
 				$ev = new OomphViolationEvent($player, $data["check_main"], $data["check_sub"], $data["violations"]);
-				$ev->call();
+				if (!$this->getConfig()->getNested("{$ev->getCheckName()}.{$ev->getCheckType()}", self::DEFAULT_CHECK_SETTINGS)["enabled"] ?? true) {
+					$ev->cancel();
+				}
 
+				$ev->call();
 				if (!$ev->isCancelled()) {
 					LoggedData::getInstance()->add($player->getName(), $data);
 					foreach ($this->alerted as $session) {
 						$session->getPlayer()->sendMessage($message);
 						$session->lastAlert = microtime(true);
 					}
+
+					$this->checkForPunishments($player, $ev->getCheckName(), $ev->getCheckType(), $ev->getViolations());
 				}
 
 				break;
 		}
+	}
+
+	private function checkForPunishments(Player $player, string $check, string $type, float $violations): void {
+		$settings = $this->getConfig()->getNested("$check.$type", self::DEFAULT_CHECK_SETTINGS);
+		if (($settings["punishment"] ?? "none") === "none") {
+			return;
+		}
+		$punishmentType = OomphPunishmentEvent::punishmentTypeFromString($settings["punishment"]);
+
+		if ($violations < ($settings["max_violations"] ?? 10)) {
+			return;
+		}
+
+		$ev = new OomphPunishmentEvent($player, $punishmentType);
+		$ev->call();
+
+		if ($ev->isCancelled()) {
+			return;
+		}
+
+		if ($punishmentType === OomphPunishmentEvent::TYPE_KICK) {
+			$player->kick(str_replace(
+				["{prefix}", "{check_main}", "{check_sub}"],
+				[$this->getPrefix(), $check, $type],
+				$this->getConfig()->get("KickMessage", "{prefix} §cKicked for the usage of third-party software.")
+			));
+
+			return;
+		}
+
+		$this->getServer()->getNameBans()->addBan($player->getName(), $this->getConfig()->get("BanMessage", "{prefix} §cBanned for the usage of third-party software."), null, "Oomph");
+	}
+
+	public function getPrefix(): string {
+		return $this->getConfig()->get("Prefix", "§7§l[§eoomph§7]§r");
 	}
 
 }

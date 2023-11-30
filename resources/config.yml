@@ -13,5 +13,59 @@ NoLogMessage: "{prefix} §a{player} has no existing logs."
 StartLogMessage: "{prefix} §5Log summary for §d{player}:"
 LogMessage: "§7- §5{check_main}§7<§d{check_sub}§7> §7[§cx{violations}§7]"
 
+KickMessage: "{prefix} §cKicked for the usage of third-party software."
+BanMessage: "{prefix} §cBanned for the usage of third-party software."
+
 Allowed-Connections:
   - "127.0.0.1"
+
+# These are the settings available for the checks provided in Oomph.
+AutoClicker:
+  A:
+    enabled: true
+    max_violations: 10
+    punishment: kick
+  B:
+    enabled: true
+    max_violations: 20
+    punishment: kick
+Invalid:
+  A:
+    enabled: true
+    max_violations: 1
+    punishment: ban
+KillAura:
+  A:
+    enabled: true
+    max_violations: 1
+    punishment: ban
+EditionFaker:
+  A:
+    enabled: true
+    max_violations: 1
+    punishment: kick
+# NOTE: Reach checks will not be enabled with combat mode set to 2 (ModeFullAuthoritative)
+Reach:
+  A:
+    enabled: true
+    max_violations: 10
+    punishment: kick
+  B:
+    enabled: true
+    max_violations: 15
+    punishment: kick
+Timer:
+  A:
+    enabled: true
+    max_violations: 10
+    punishment: kick
+# NOTE: Velocity checks will nto be enabled with movement mode set to 2 (ModeFullAuthoritative)
+Velocity:
+  A:
+    enabled: true
+    max_violations: 20
+    punishment: kick
+  B:
+    enabled: true
+    max_violations: 20
+    punishment: kick
