@@ -301,7 +301,12 @@ class Oomph extends PluginBase implements Listener {
 				}
 
 				$netRef = new ReflectionClass($event->getOrigin());
-				$netRef->getProperty("ip")->setValue($event->getOrigin(), explode(":", $data["address"])[0]);
+				if (str_contains($data["address"], "[") && str_contains($data["address"], "]")) {
+					preg_match('#\[(.*?)\]#', $data["address"], $match);
+					$netRef->getProperty("ip")->setValue($event->getOrigin(), $match[1] ?? "::1");
+				} else {
+					$netRef->getProperty("ip")->setValue($event->getOrigin(), explode(":", $data["address"])[0]);
+				}
 				$netRef->getProperty("packetBatchLimiter")->setValue($event->getOrigin(), new PacketRateLimiter("Packet Batches", 1_000_000, 1_000_000));
 				$netRef->getProperty("gamePacketLimiter")->setValue($event->getOrigin(), new PacketRateLimiter("Game Packets", 1_000_000, 1_000_000));
 
