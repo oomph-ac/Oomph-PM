@@ -265,7 +265,7 @@ class Oomph extends PluginBase implements Listener {
 		$ref = new ReflectionClass($player);
 		$ref->getProperty("xuid")->setValue($player, $xuid);
 		$ref->getProperty("authenticated")->setValue($player, true);
-		$ref->getProperty("networkSession")->setValue(new OomphNetworkSession($player->getNetworkSession()));
+		$ref->getProperty("networkSession")->setValue($player, new OomphNetworkSession($player->getNetworkSession()));
 		unset($this->xuidList["{$player->getNetworkSession()->getIp()}:{$player->getNetworkSession()->getPort()}"]);
 
 		OomphSession::register($player);
