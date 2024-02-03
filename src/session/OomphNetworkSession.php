@@ -89,8 +89,8 @@ class OomphNetworkSession extends NetworkSession {
 	private EntityEventBroadcaster $entityEventBroadcaster;
 	private Compressor $compressor;
 	private TypeConverter $typeConverter;
-	private string $ip;
-	private int $port;
+	private string $ip = "";
+	private int $port = 0;
 
 	/**
 	 * @param NetworkSession $parent
