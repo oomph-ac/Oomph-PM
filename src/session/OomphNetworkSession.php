@@ -205,6 +205,10 @@ class OomphNetworkSession extends NetworkSession {
 
 		foreach ($properties as $property) {
 			$this->{$property} = $ref->getProperty($property)->getValue($parent);
+			if ($property == "handler") {
+				$ref2 = new \ReflectionClass($this->handler);
+				$ref2->getProperty("session")->setValue($this->handler, $this);
+			}
 		}
 	}
 
