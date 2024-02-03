@@ -84,6 +84,10 @@ class Oomph extends PluginBase implements Listener {
 				}
 				$this->netInterface->setPacketLimit(PHP_INT_MAX); // TODO: not set this to PHP_INT_MAX.
 			}
+
+			$this->getServer()->getCommandMap()->getCommand("oalerts")?->setPermission($this->alertPermission);
+			$this->getServer()->getCommandMap()->getCommand("odelay")?->setPermission($this->alertPermission);
+			$this->getServer()->getCommandMap()->getCommand("ologs")?->setPermission($this->logPermission);
 		}), 1);
 
 		$this->getScheduler()->scheduleRepeatingTask(new ClosureTask(function(): void {

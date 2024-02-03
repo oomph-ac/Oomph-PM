@@ -15,10 +15,13 @@ commands:
   oalerts:
     description: Toggle Oomph alerts on/off.
     usage: "/oalerts"
+    permission: "Oomph.Alerts"
   odelay:
     description: Changes how long the delay of alerts from Oomph are.
     usage: "/odelay <seconds>"
+    permission: "Oomph.Alerts"
   ologs:
     description: Displays the checks that the specified player has failed on Oomph.
     usage: "/ologs <player>"
+    permission: "Oomph.Logs"
 ...
