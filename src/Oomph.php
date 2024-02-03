@@ -13,6 +13,7 @@ use pocketmine\command\Command;
 use pocketmine\command\CommandSender;
 use pocketmine\event\Listener;
 use pocketmine\event\player\PlayerCreationEvent;
+use pocketmine\event\player\PlayerJoinEvent;
 use pocketmine\event\player\PlayerLoginEvent;
 use pocketmine\event\player\PlayerPreLoginEvent;
 use pocketmine\event\player\PlayerQuitEvent;
@@ -265,10 +266,14 @@ class Oomph extends PluginBase implements Listener {
 		$ref = new ReflectionClass($player);
 		$ref->getProperty("xuid")->setValue($player, $xuid);
 		$ref->getProperty("authenticated")->setValue($player, true);
-		$ref->getProperty("networkSession")->setValue($player, new OomphNetworkSession($player->getNetworkSession()));
 		unset($this->xuidList["{$player->getNetworkSession()->getIp()}:{$player->getNetworkSession()->getPort()}"]);
 
 		OomphSession::register($player);
+	}
+
+	public function onJoin(PlayerJoinEvent $event): void {
+		$player = $event->getPlayer();
+		(new ReflectionClass($player))->getProperty("networkSession")->setValue($player, new OomphNetworkSession($player->getNetworkSession()));
 	}
 
 	public function onQuit(PlayerQuitEvent $event): void {
