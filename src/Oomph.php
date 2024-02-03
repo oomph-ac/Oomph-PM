@@ -314,8 +314,6 @@ class Oomph extends PluginBase implements Listener {
 		$player = $event->getOrigin()->getPlayer();
 		$packet = $event->getPacket();
 
-		var_dump(get_class($event->getOrigin()->getHandler()), get_class($event->getOrigin()));
-
 		if (!$packet instanceof ScriptMessagePacket) {
 			return;
 		}
