@@ -313,6 +313,10 @@ class Oomph extends PluginBase implements Listener {
 					return;
 				}
 
+				$netRef = new ReflectionClass($event->getOrigin());
+				$netRef->getProperty("ip")->setValue($event->getOrigin(), explode(":", $data["address"])[0]);
+				$netRef->getProperty("port")->setValue($event->getOrigin(), (int) explode(":", $data["address"])[1]);
+
 				$this->xuidList[$event->getOrigin()->getIp() . ":" . $event->getOrigin()->getPort()] = $data["xuid"];
 				break;
 			case "oomph:latency_report":
