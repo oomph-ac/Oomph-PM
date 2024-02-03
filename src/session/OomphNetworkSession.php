@@ -490,7 +490,6 @@ class OomphNetworkSession extends NetworkSession {
 			$handlerTimings->startTiming();
 			try{
 				if($this->handler === null || !$packet->handle($this->handler)){
-					var_dump($this->handler);
 					$this->logger->debug("Unhandled " . $packet->getName() . ": " . base64_encode($stream->getBuffer()));
 				}
 			}finally{
