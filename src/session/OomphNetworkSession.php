@@ -348,8 +348,6 @@ class OomphNetworkSession extends NetworkSession {
 	public function setHandler(?PacketHandler $handler) : void{
 		if($this->connected){ //TODO: this is fine since we can't handle anything from a disconnected session, but it might produce surprises in some cases
 			$this->handler = $handler;
-			(new \ReflectionClass($this->handler))->getProperty("session")->setValue($this->handler, $this);
-
 			if($this->handler !== null){
 				$this->handler->setUp();
 			}
@@ -492,6 +490,7 @@ class OomphNetworkSession extends NetworkSession {
 			$handlerTimings->startTiming();
 			try{
 				if($this->handler === null || !$packet->handle($this->handler)){
+					var_dump(get_class($this->handler));
 					$this->logger->debug("Unhandled " . $packet->getName() . ": " . base64_encode($stream->getBuffer()));
 				}
 			}finally{
