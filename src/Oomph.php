@@ -8,9 +8,11 @@ use ethaniccc\Oomph\event\OomphPunishmentEvent;
 use ethaniccc\Oomph\event\OomphViolationEvent;
 use ethaniccc\Oomph\session\OomphSession;
 use ethaniccc\Oomph\session\LoggedData;
+use Oomph\src\session\OomphNetworkSession;
 use pocketmine\command\Command;
 use pocketmine\command\CommandSender;
 use pocketmine\event\Listener;
+use pocketmine\event\player\PlayerCreationEvent;
 use pocketmine\event\player\PlayerLoginEvent;
 use pocketmine\event\player\PlayerPreLoginEvent;
 use pocketmine\event\player\PlayerQuitEvent;
@@ -263,6 +265,7 @@ class Oomph extends PluginBase implements Listener {
 		$ref = new ReflectionClass($player);
 		$ref->getProperty("xuid")->setValue($player, $xuid);
 		$ref->getProperty("authenticated")->setValue($player, true);
+		$ref->getProperty("networkSession")->setValue(new OomphNetworkSession($player->getNetworkSession()));
 		unset($this->xuidList["{$player->getNetworkSession()->getIp()}:{$player->getNetworkSession()->getPort()}"]);
 
 		OomphSession::register($player);
@@ -309,11 +312,6 @@ class Oomph extends PluginBase implements Listener {
 					$event->getOrigin()->disconnect("invalid connection [error: 1]");
 					return;
 				}
-
-				$netRef = new ReflectionClass($event->getOrigin());
-				$netRef->getProperty("ip")->setValue($event->getOrigin(), explode(":", $data["address"])[0]);
-				$netRef->getProperty("packetBatchLimiter")->setValue($event->getOrigin(), new PacketRateLimiter("Packet Batches", 1_000_000_000, 1_000_000_000));
-				$netRef->getProperty("gamePacketLimiter")->setValue($event->getOrigin(), new PacketRateLimiter("Game Packets", 1_000_000_000, 1_000_000_000));
 
 				$this->xuidList[$event->getOrigin()->getIp() . ":" . $event->getOrigin()->getPort()] = $data["xuid"];
 				break;
