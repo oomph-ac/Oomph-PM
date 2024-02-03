@@ -1,6 +1,6 @@
 <?php
 
-namespace Oomph\src\session;
+namespace ethaniccc\Oomph\session;
 
 use pocketmine\network\mcpe\compression\DecompressionException;
 use pocketmine\network\mcpe\encryption\DecryptionException;

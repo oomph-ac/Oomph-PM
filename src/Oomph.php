@@ -6,9 +6,9 @@ namespace ethaniccc\Oomph;
 
 use ethaniccc\Oomph\event\OomphPunishmentEvent;
 use ethaniccc\Oomph\event\OomphViolationEvent;
+use ethaniccc\Oomph\session\OomphNetworkSession;
 use ethaniccc\Oomph\session\OomphSession;
 use ethaniccc\Oomph\session\LoggedData;
-use Oomph\src\session\OomphNetworkSession;
 use pocketmine\command\Command;
 use pocketmine\command\CommandSender;
 use pocketmine\event\Listener;
