@@ -1,6 +1,11 @@
-Version: "1.0.0"
+Version: "1.0.1"
 Enabled: true
 Allow-NonOomph-Conn: false
+
+# Permission for receiving Oomph alerts.
+Alert-Permission: "Oomph.Alerts"
+# Permission for checking Oomph logs.
+Logs-Permission: "Oomph.Logs"
 
 # Prefix for Oomph.
 Prefix: "§7§l[§eoomph§7]§r"
@@ -8,10 +13,10 @@ Prefix: "§7§l[§eoomph§7]§r"
 FlaggedMessage: "{prefix} §d{player} §7flagged §4{check_main} §7(§c{check_sub}§7) §7[§5x{violations}§7]"
 
 # Message that is used for the logs command when the player does not have any logs.
-NoLogMessage: "{prefix} §a{player} has no existing logs."
+NoLogMessage: "{prefix} §aNo logs were found for {player}."
 # Message that is used for the logs command when the player has existing logs.
 StartLogMessage: "{prefix} §5Log summary for §d{player}:"
-LogMessage: "§7- §5{check_main}§7<§d{check_sub}§7> §7[§cx{violations}§7]"
+LogMessage: "§7- §6Detected for §5{check_main}§7<§d{check_sub}§7> §7[§cx{violations}§7]"
 
 KickMessage: "{prefix} §cKicked for the usage of third-party software."
 BanMessage: "{prefix} §cBanned for the usage of third-party software."
@@ -23,14 +28,22 @@ Allowed-Connections:
 AutoClicker:
   A:
     enabled: true
-    max_violations: 10
+    max_violations: 25
     punishment: kick
   B:
     enabled: true
-    max_violations: 20
-    punishment: kick
-Invalid:
+    max_violations: 25
+    punishment: none
+BadPacket:
   A:
+    enabled: true
+    max_violations: 1
+    punishment: kick
+  B:
+    enabled: true
+    max_violations: 1
+    punishment: ban
+  C:
     enabled: true
     max_violations: 1
     punishment: ban
@@ -44,7 +57,10 @@ EditionFaker:
     enabled: true
     max_violations: 1
     punishment: kick
-# NOTE: Reach checks will not be enabled with combat mode set to 2 (ModeFullAuthoritative)
+  B:
+    enabled: true
+    max_violations: 1
+    punishment: kick
 Reach:
   A:
     enabled: true
@@ -52,14 +68,22 @@ Reach:
     punishment: kick
   B:
     enabled: true
-    max_violations: 15
+    max_violations: 5
     punishment: kick
 Timer:
   A:
     enabled: true
     max_violations: 10
     punishment: kick
-# NOTE: Velocity checks will nto be enabled with movement mode set to 2 (ModeFullAuthoritative)
+Movement:
+  A:
+    enabled: true
+    max_violations: 10
+    punishment: kick
+  B:
+    enabled: true
+    max_violations: 10
+    punishment: kick
 Velocity:
   A:
     enabled: true
