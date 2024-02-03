@@ -36,7 +36,7 @@ class OomphNetworkSession extends NetworkSession {
 
 	private \ReflectionClass $refl;
 
-	private bool $enableCompression = true;
+	protected bool $enableCompression = true;
 
 	private bool $isFirstPacket = true;
 

@@ -67,10 +67,10 @@ class Oomph extends PluginBase implements Listener {
 
 	public function onEnable(): void {
 
-		if (!str_ends_with(BEDROCK_DATA_PATH, "pocketmine/bedrock-data/")) {
+		/* if (!str_ends_with(BEDROCK_DATA_PATH, "pocketmine/bedrock-data/")) {
 			$this->getLogger()->emergency("Pocketmine spoons are not supported");
 			$this->getServer()->forceShutdown();
-		}
+		} */
 
 		self::$instance = $this;
 
