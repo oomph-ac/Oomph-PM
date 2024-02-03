@@ -2,19 +2,33 @@
 
 namespace ethaniccc\Oomph\session;
 
+use pocketmine\nbt\tag\CompoundTag;
+use pocketmine\network\mcpe\compression\CompressBatchPromise;
+use pocketmine\network\mcpe\compression\Compressor;
 use pocketmine\network\mcpe\compression\DecompressionException;
+use pocketmine\network\mcpe\convert\TypeConverter;
 use pocketmine\network\mcpe\encryption\DecryptionException;
 use pocketmine\network\mcpe\encryption\EncryptionContext;
+use pocketmine\network\mcpe\EntityEventBroadcaster;
+use pocketmine\network\mcpe\handler\PacketHandler;
+use pocketmine\network\mcpe\InventoryManager;
 use pocketmine\network\mcpe\NetworkSession;
+use pocketmine\network\mcpe\PacketBroadcaster;
 use pocketmine\network\mcpe\PacketRateLimiter;
+use pocketmine\network\mcpe\PacketSender;
 use pocketmine\network\mcpe\protocol\PacketDecodeException;
 use pocketmine\network\mcpe\protocol\PacketPool;
 use pocketmine\network\mcpe\protocol\serializer\PacketBatch;
+use pocketmine\network\mcpe\protocol\serializer\PacketSerializerContext;
+use pocketmine\network\NetworkSessionManager;
 use pocketmine\network\PacketHandlingException;
+use pocketmine\player\Player;
+use pocketmine\player\PlayerInfo;
 use pocketmine\Server;
 use pocketmine\timings\Timings;
 use pocketmine\utils\BinaryDataException;
 use pocketmine\utils\BinaryStream;
+use pocketmine\utils\ObjectSet;
 
 class OomphNetworkSession extends NetworkSession {
 
@@ -24,35 +38,106 @@ class OomphNetworkSession extends NetworkSession {
 	private const INCOMING_GAME_PACKETS_PER_TICK = 2;
 	private const INCOMING_GAME_PACKETS_BUFFER_TICKS = 100;
 
-	private PacketPool $packetPool;
 	private PacketRateLimiter $packetBatchLimiter;
 	private PacketRateLimiter $gamePacketLimiter;
 
-	private ?EncryptionContext $cipher = null;
-	protected bool $enableCompression = false;
+	private \PrefixedLogger $logger;
+	private ?Player $player = null;
+	protected ?PlayerInfo $info = null;
+	private ?int $ping = null;
 
+	private ?PacketHandler $handler = null;
+
+	private bool $connected = true;
+	private bool $disconnectGuard = false;
+	protected bool $loggedIn = false;
+	private bool $authenticated = false;
+	private int $connectTime;
+	private ?CompoundTag $cachedOfflinePlayerData = null;
+
+	private ?EncryptionContext $cipher = null;
+
+	/** @var string[] */
+	private array $sendBuffer = [];
+	/** @var string[] */
+	private array $chunkCacheBlobs = [];
+	private bool $chunkCacheEnabled = false;
+
+	/**
+	 * @var \SplQueue|CompressBatchPromise[]
+	 * @phpstan-var \SplQueue<CompressBatchPromise>
+	 */
+	private \SplQueue $compressedQueue;
+	private bool $forceAsyncCompression = true;
+	private ?int $protocolId = null;
+	protected bool $enableCompression = false; //disabled until handshake completed
+
+	private ?InventoryManager $invManager = null;
+
+	/**
+	 * @var \Closure[]|ObjectSet
+	 * @phpstan-var ObjectSet<\Closure() : void>
+	 */
+	private ObjectSet $disposeHooks;
+
+	private Server $server;
+	private NetworkSessionManager $manager;
+	private PacketPool $packetPool;
+	private PacketSerializerContext $packetSerializerContext;
+	protected PacketSender $sender;
+	private PacketBroadcaster $broadcaster;
+	private EntityEventBroadcaster $entityEventBroadcaster;
+	private Compressor $compressor;
+	private TypeConverter $typeConverter;
+	private string $ip;
+	private int $port;
+
+	/**
+	 * @param NetworkSession $parent
+	 * @throws \ReflectionException
+	 */
 	public function __construct(NetworkSession $parent) {
 		$ref = new \ReflectionClass($parent);
-		$this->packetPool = $ref->getProperty("packetPool")->getValue($parent);
-		$this->packetBatchLimiter = new PacketRateLimiter("Packet Batches", self::INCOMING_PACKET_BATCH_PER_TICK, self::INCOMING_PACKET_BATCH_BUFFER_TICKS);
-		$this->gamePacketLimiter = new PacketRateLimiter("Game Packets", self::INCOMING_GAME_PACKETS_PER_TICK, self::INCOMING_GAME_PACKETS_BUFFER_TICKS);
+		$properties = [
+			"packetBatchLimiter",
+			"gamePacketLimiter",
+			"logger",
+			"player",
+			"info",
+			"ping",
+			"handler",
+			"connected",
+			"disconnectGuard",
+			"loggedIn",
+			"authenticated",
+			"connectTime",
+			"cachedOfflinePlayerData",
+			"cipher",
+			"sendBuffer",
+			"chunkCacheBlobs",
+			"chunkCacheEnabled",
+			"compressedQueue",
+			"forceAsyncCompression",
+			"protocolId",
+			"enableCompression",
+			"invManager",
 
-		$this->cipher = $ref->getProperty("cipher")->getValue($parent);
-		$this->enableCompression = $ref->getProperty("enableCompression")->getValue($parent);
+			"server",
+			"manager",
+			"packetPool",
+			"packetSerializerContext",
+			"sender",
+			"broadcaster",
+			"entityEventBroadcaster",
+			"compressor",
+			"typeConverter",
+			"ip",
+			"port"
+		];
 
-		parent::__construct(
-			Server::getInstance(),
-			$ref->getProperty("manager")->getValue($parent),
-			$this->packetPool,
-			$parent->getPacketSerializerContext(),
-			$ref->getProperty("sender")->getValue($parent),
-			$parent->getBroadcaster(),
-			$parent->getEntityEventBroadcaster(),
-			$parent->getCompressor(),
-			$parent->getTypeConverter(),
-			$parent->getIp(),
-			$parent->getPort(),
-		);
+		foreach ($properties as $property) {
+			$this->{$property} = $ref->getProperty($property)->getValue($parent);
+		}
 	}
 
 	public function handleEncoded(string $payload) : void{
