@@ -29,6 +29,7 @@ class OomphNetworkSession extends NetworkSession {
 	private PacketRateLimiter $gamePacketLimiter;
 
 	private ?EncryptionContext $cipher = null;
+	protected bool $enableCompression = false;
 
 	public function __construct(NetworkSession $parent) {
 		$ref = new \ReflectionClass($parent);
@@ -37,6 +38,7 @@ class OomphNetworkSession extends NetworkSession {
 		$this->gamePacketLimiter = new PacketRateLimiter("Game Packets", self::INCOMING_GAME_PACKETS_PER_TICK, self::INCOMING_GAME_PACKETS_BUFFER_TICKS);
 
 		$this->cipher = $ref->getProperty("cipher")->getValue($parent);
+		$this->enableCompression = $ref->getProperty("enableCompression")->getValue($parent);
 
 		parent::__construct(
 			Server::getInstance(),
