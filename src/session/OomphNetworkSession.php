@@ -205,11 +205,10 @@ class OomphNetworkSession extends NetworkSession {
 
 		foreach ($properties as $property) {
 			$this->{$property} = $ref->getProperty($property)->getValue($parent);
-			if ($property == "handler") {
-				$ref2 = new \ReflectionClass($this->handler);
-				$ref2->getProperty("session")->setValue($this->handler, $this);
-			}
 		}
+
+		$ref2 = new \ReflectionClass($this->handler);
+		$ref2->getProperty("session")->setValue($this->handler, $this);
 	}
 
 	private function getLogPrefix() : string{
@@ -349,6 +348,8 @@ class OomphNetworkSession extends NetworkSession {
 	public function setHandler(?PacketHandler $handler) : void{
 		if($this->connected){ //TODO: this is fine since we can't handle anything from a disconnected session, but it might produce surprises in some cases
 			$this->handler = $handler;
+			(new \ReflectionClass($this->handler))->getProperty("session")->setValue($this->handler, $this);
+
 			if($this->handler !== null){
 				$this->handler->setUp();
 			}
