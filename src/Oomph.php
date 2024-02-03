@@ -7,10 +7,12 @@ namespace ethaniccc\Oomph;
 use ethaniccc\Oomph\event\OomphPunishmentEvent;
 use ethaniccc\Oomph\event\OomphViolationEvent;
 use ethaniccc\Oomph\session\OomphNetworkSession;
+use ethaniccc\Oomph\session\OomphRakLibInterface;
 use ethaniccc\Oomph\session\OomphSession;
 use ethaniccc\Oomph\session\LoggedData;
 use pocketmine\command\Command;
 use pocketmine\command\CommandSender;
+use pocketmine\event\EventPriority;
 use pocketmine\event\Listener;
 use pocketmine\event\player\PlayerCreationEvent;
 use pocketmine\event\player\PlayerJoinEvent;
@@ -18,18 +20,24 @@ use pocketmine\event\player\PlayerLoginEvent;
 use pocketmine\event\player\PlayerPreLoginEvent;
 use pocketmine\event\player\PlayerQuitEvent;
 use pocketmine\event\server\DataPacketReceiveEvent;
+use pocketmine\event\server\NetworkInterfaceRegisterEvent;
+use pocketmine\network\mcpe\NetworkSession;
 use pocketmine\network\mcpe\PacketRateLimiter;
 use pocketmine\network\mcpe\protocol\ScriptMessagePacket;
 use pocketmine\network\mcpe\raklib\RakLibInterface;
+use pocketmine\network\query\DedicatedQueryNetworkInterface;
 use pocketmine\player\Player;
 use pocketmine\player\PlayerInfo;
 use pocketmine\player\XboxLivePlayerInfo;
 use pocketmine\plugin\PluginBase;
 use pocketmine\scheduler\ClosureTask;
+use pocketmine\Server;
 use pocketmine\utils\AssumptionFailedError;
 use pocketmine\utils\TextFormat;
 use ReflectionClass;
 use ReflectionException;
+
+use const pocketmine\BEDROCK_DATA_PATH;
 
 class Oomph extends PluginBase implements Listener {
 
@@ -58,7 +66,24 @@ class Oomph extends PluginBase implements Listener {
 	private ?RakLibInterface $netInterface = null;
 
 	public function onEnable(): void {
+
+		if (!str_ends_with(BEDROCK_DATA_PATH, "pocketmine/bedrock-data/")) {
+			$this->getLogger()->emergency("Pocketmine spoons are not supported");
+			$this->getServer()->forceShutdown();
+		}
+
 		self::$instance = $this;
+
+		$this->getServer()->getNetwork()->registerInterface(new OomphRakLibInterface($this->getServer(), $this->getServer()->getIp(), $this->getServer()->getPort(), false)); // do we want upstream connection to use ipv6 (tip: we could load balance by having some upstream connections on ipv4 and some on ipv6)
+
+		$this->getServer()->getPluginManager()->registerEvent(NetworkInterfaceRegisterEvent::class, function(NetworkInterfaceRegisterEvent $event) : void{
+			$interface = $event->getInterface();
+			if($interface instanceof OomphRakLibInterface || (!$interface instanceof RakLibInterface && !$interface instanceof DedicatedQueryNetworkInterface)){
+				return;
+			}
+			$this->getLogger()->debug("Prevented network interface " . get_class($interface) . " from being registered");
+			$event->cancel();
+		}, EventPriority::NORMAL, $this);
 
 		if ($this->getConfig()->get("Version", "n/a") !== "1.0.1") {
 			@unlink($this->getDataFolder() . "config.yml");
@@ -273,7 +298,6 @@ class Oomph extends PluginBase implements Listener {
 
 	public function onJoin(PlayerJoinEvent $event): void {
 		$player = $event->getPlayer();
-		(new ReflectionClass($player))->getProperty("networkSession")->setValue($player, new OomphNetworkSession($player->getNetworkSession()));
 	}
 
 	public function onQuit(PlayerQuitEvent $event): void {
@@ -289,6 +313,8 @@ class Oomph extends PluginBase implements Listener {
 	public function onClientPacket(DataPacketReceiveEvent $event): void {
 		$player = $event->getOrigin()->getPlayer();
 		$packet = $event->getPacket();
+
+		var_dump(get_class($event->getOrigin()->getHandler()), get_class($event->getOrigin()));
 
 		if (!$packet instanceof ScriptMessagePacket) {
 			return;
@@ -318,9 +344,15 @@ class Oomph extends PluginBase implements Listener {
 					return;
 				}
 
-				$netRef = new ReflectionClass($event->getOrigin());
-				$netRef->getProperty("ip")->setValue($event->getOrigin(), explode(":", $data["address"])[0]);
-				$netRef->getProperty("port")->setValue($event->getOrigin(), (int) explode(":", $data["address"])[1]);
+				$netRef = new ReflectionClass(NetworkSession::class);
+				$addrArray = explode(":", $data["address"]);
+				if (str_contains($data["address"], "[") && str_contains($data["address"], "]")) {
+					preg_match('#\[(.*?)\]#', $data["address"], $match);
+					$netRef->getProperty("ip")->setValue($event->getOrigin(), $match[1] ?? "::1");
+				} else {
+					$netRef->getProperty("ip")->setValue($event->getOrigin(), $addrArray[0]);
+				}
+				$netRef->getProperty("port")->setValue($event->getOrigin(), (int) end($addrArray));
 
 				$this->xuidList[$event->getOrigin()->getIp() . ":" . $event->getOrigin()->getPort()] = $data["xuid"];
 				break;
