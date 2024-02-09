@@ -31,12 +31,11 @@ use pocketmine\utils\TextFormat;
 use pocketmine\world\Position;
 use pocketmine\YmlServerProperties;
 use pocketmine\lang\KnownTranslationFactory;
+use pocketmine\network\mcpe\protocol\types\CompressionAlgorithm;
 
 class OomphNetworkSession extends NetworkSession {
 
 	private \ReflectionClass $refl;
-
-	protected bool $enableCompression = true;
 
 	private bool $isFirstPacket = true;
 
@@ -53,7 +52,6 @@ class OomphNetworkSession extends NetworkSession {
 	private function onSessionStartSuccess() : void{
 		$this->getLogger()->debug("Session start handshake completed, awaiting login packet");
 		ReflectionUtils::invoke(NetworkSession::class, $this, "flushSendBuffer", true);
-		$this->enableCompression = true;
 		$this->setHandler(new LoginPacketHandler(
 			Server::getInstance(),
 			$this,
@@ -79,6 +77,7 @@ class OomphNetworkSession extends NetworkSession {
 		$cipher = $this->getReflProperty("cipher");
 		$enableCompression = $this->getReflProperty("enableCompression");
 		$packetPool = $this->getReflProperty("packetPool");
+		$compressor = $this->getCompressor();
 
 		Timings::$playerNetworkReceive->startTiming();
 		try{
@@ -96,27 +95,28 @@ class OomphNetworkSession extends NetworkSession {
 				}
 			}
 
-			if($enableCompression && $this->enableCompression){
+			if (strlen($payload) < 1) {
+				throw new PacketHandlingException("No bytes in payload");
+			}
+
+			$decompressed = "";
+			if($enableCompression){
 				Timings::$playerNetworkReceiveDecompress->startTiming();
-				try{
-					$decompressed = $this->getCompressor()->decompress($payload);
-				}catch(DecompressionException $e){
-					if($this->isFirstPacket){
-						$this->getLogger()->debug("Failed to decompress packet: " . base64_encode($payload));
-
-						$this->enableCompression = false;
-						$this->setHandler(new SessionStartPacketHandler(
-							$this,
-							fn() => $this->onSessionStartSuccess()
-						));
-
-						$decompressed = $payload;
-					}else{
-						$this->getLogger()->debug("Failed to decompress packet: " . base64_encode($payload));
+				$compressionType = ord($payload[0]);
+				$compressed = substr($payload, 1);
+				if($compressionType === CompressionAlgorithm::NONE){
+					$decompressed = $compressed;
+				}elseif($compressionType === $compressor->getNetworkId()){
+					try{
+						$decompressed = $compressor->decompress($compressed);
+					}catch(DecompressionException $e){
+						$this->getLogger()->debug("Failed to decompress packet: " . base64_encode($compressed));
 						throw PacketHandlingException::wrap($e, "Compressed packet batch decode error");
+					}finally{
+						Timings::$playerNetworkReceiveDecompress->stopTiming();
 					}
-				}finally{
-					Timings::$playerNetworkReceiveDecompress->stopTiming();
+				}else{
+					throw new PacketHandlingException("Packet compressed with unexpected compression type $compressionType");
 				}
 			}else{
 				$decompressed = $payload;
