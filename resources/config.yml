@@ -10,7 +10,7 @@ Logs-Permission: "Oomph.Logs"
 # Prefix for Oomph.
 Prefix: "§7§l[§eoomph§7]§r"
 # Message that is broadcast to staff, alerting them that a player failed a check.
-FlaggedMessage: "{prefix} §d{player} §7flagged §4{check_main} §7(§c{check_sub}§7) §7[§5x{violations}§7] §f{extra_data}"
+FlaggedMessage: "{prefix} §d{player} §7flagged §4{check_main} §7(§c{check_sub}§7) §7[§5x{violations}§7] §7{extra_data}"
 
 # Message that is used for the logs command when the player does not have any logs.
 NoLogMessage: "{prefix} §aNo logs were found for {player}."

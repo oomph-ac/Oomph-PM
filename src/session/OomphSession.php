@@ -17,7 +17,7 @@ class OomphSession {
 	public static array $sessions = [];
 	public bool $alertsEnabled = false;
 	public bool $authorized = false;
-	public float $alertDelay = 2;
+	public float $alertDelay = 0.5;
 	public float $lastAlert = 0;
 
 	private Player $player;
