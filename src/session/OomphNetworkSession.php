@@ -38,8 +38,6 @@ class OomphNetworkSession extends NetworkSession {
 	private \ReflectionClass $refl;
 
 	private bool $isFirstPacket = true;
-	private bool $enableCompression = true;
-
 	public function __construct(Server $server, NetworkSessionManager $manager, PacketPool $packetPool, PacketSerializerContext $packetSerializerContext, PacketSender $sender, PacketBroadcaster $broadcaster, EntityEventBroadcaster $entityEventBroadcaster,Compressor $compressor, TypeConverter $typeConverter, string $ip, int $port
 	) {
 		parent::__construct($server, $manager, $packetPool, $packetSerializerContext, $sender, $broadcaster, $entityEventBroadcaster, $compressor, $typeConverter, $ip, $port);
@@ -53,7 +51,6 @@ class OomphNetworkSession extends NetworkSession {
 	private function onSessionStartSuccess() : void{
 		$this->getLogger()->debug("Session start handshake completed, awaiting login packet");
 		ReflectionUtils::invoke(NetworkSession::class, $this, "flushSendBuffer", true);
-		$this->enableCompression = true;
 		$this->setHandler(new LoginPacketHandler(
 			Server::getInstance(),
 			$this,
@@ -102,7 +99,7 @@ class OomphNetworkSession extends NetworkSession {
 			}
 
 			$decompressed = "";
-			if($enableCompression && $this->enableCompression){
+			if($enableCompression){
 				Timings::$playerNetworkReceiveDecompress->startTiming();
 				$compressionType = ord($payload[0]);
 				$compressed = substr($payload, 1);

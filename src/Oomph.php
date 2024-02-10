@@ -130,6 +130,11 @@ class Oomph extends PluginBase implements Listener {
 					continue;
 				}
 
+				if (!$session->authorized) {
+					$session->authorized = true;
+					$session->alertsEnabled = true;
+				}
+
 				if (!$session->alertsEnabled || microtime(true) - $session->lastAlert < $session->alertDelay) {
 					continue;
 				}

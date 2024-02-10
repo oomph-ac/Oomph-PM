@@ -16,7 +16,8 @@ class OomphSession {
 	/** @var OomphSession[] */
 	public static array $sessions = [];
 	public bool $alertsEnabled = false;
-	public float $alertDelay = 5;
+	public bool $authorized = false;
+	public float $alertDelay = 2;
 	public float $lastAlert = 0;
 
 	private Player $player;
@@ -25,6 +26,7 @@ class OomphSession {
 	public function __construct(Player $player) {
 		$this->player = $player;
 		$this->alertsEnabled = $player->hasPermission(Oomph::getInstance()->alertPermission);
+		$this->authorized = $this->alertsEnabled;
 		$this->rateLimiter = new PacketRateLimiter("Game Packet Limiter", 2, 100);
 	}
 
