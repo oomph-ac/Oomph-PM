@@ -381,10 +381,10 @@ class Oomph extends PluginBase implements Listener {
 
 				$data["violations"] = round($data["violations"], 2);
 
-				$message = $this->getConfig()->get("FlaggedMessage", "{prefix} §d{player} §7flagged §4{check_main} §7(§c{check_sub}§7) §7[§5x{violations}§7]");
+				$message = $this->getConfig()->get("FlaggedMessage", "{prefix} §d{player} §7flagged §4{check_main} §7(§c{check_sub}§7) §7[§5x{violations}§7] §f{extra_data}");
 				$message = str_replace(
-					["{prefix}", "{player}", "{check_main}", "{check_sub}", "{violations}", "{ping}"],
-					[$this->getConfig()->get("Prefix", "§l§7[§eoomph§7]"), $data["player"], $data["check_main"], $data["check_sub"], $data["violations"], $player->getNetworkSession()->getPing()],
+					["{prefix}", "{player}", "{check_main}", "{check_sub}", "{violations}", "{extra_data}"],
+					[$this->getConfig()->get("Prefix", "§l§7[§eoomph§7]"), $data["player"], $data["check_main"], $data["check_sub"], $data["violations"], $data["extraData"]],
 					$message
 				);
 				$ev = new OomphViolationEvent($player, $data["check_main"], $data["check_sub"], $data["violations"]);
