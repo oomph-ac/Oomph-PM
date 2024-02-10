@@ -84,6 +84,11 @@ Movement:
     enabled: true
     max_violations: 10
     punishment: kick
+
+  C:
+    enabled: true
+    max_violations: 5
+    punishment: kick
 Velocity:
   A:
     enabled: true
