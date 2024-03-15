@@ -74,7 +74,7 @@ class Oomph extends PluginBase implements Listener {
 
 		self::$instance = $this;
 
-		$this->getServer()->getNetwork()->registerInterface(new OomphRakLibInterface($this->getServer(), $this->getServer()->getIp(), $this->getServer()->getPort(), false)); // do we want upstream connection to use ipv6 (tip: we could load balance by having some upstream connections on ipv4 and some on ipv6)
+		$this->getServer()->getNetwork()->registerInterface(new OomphRakLibInterface($this->getServer(), "127.0.0.1", $this->getServer()->getPort(), false)); // do we want upstream connection to use ipv6 (tip: we could load balance by having some upstream connections on ipv4 and some on ipv6)
 
 		$this->getServer()->getPluginManager()->registerEvent(NetworkInterfaceRegisterEvent::class, function(NetworkInterfaceRegisterEvent $event) : void{
 			$interface = $event->getInterface();
