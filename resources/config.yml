@@ -47,6 +47,10 @@ BadPacket:
     enabled: true
     max_violations: 1
     punishment: ban
+  D:
+    enabled: true
+    max_violations: 1
+    punishment: ban
 KillAura:
   A:
     enabled: true
