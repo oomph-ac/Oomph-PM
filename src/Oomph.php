@@ -245,9 +245,7 @@ class Oomph extends PluginBase implements Listener {
 	public function onToggleFlight(PlayerToggleFlightEvent $event): void {
 		$var1 = var_export($event->isFlying(), true);
 		$var2 = var_export($event->getPlayer()->getAllowFlight(), true);
-		$event->getPlayer()->sendMessage("toggled! flying=$var1 allowed=$var2");
 		if ($event->isFlying() && !$event->getPlayer()->getAllowFlight()) {
-			$event->getPlayer()->sendMessage("eat shit");
 			$event->cancel();
 		}
 	}
