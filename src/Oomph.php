@@ -1,7 +1,5 @@
 <?php
 
-declare(strict_types=1);
-
 namespace ethaniccc\Oomph;
 
 use ethaniccc\Oomph\event\OomphPunishmentEvent;
@@ -19,11 +17,14 @@ use pocketmine\event\player\PlayerJoinEvent;
 use pocketmine\event\player\PlayerLoginEvent;
 use pocketmine\event\player\PlayerPreLoginEvent;
 use pocketmine\event\player\PlayerQuitEvent;
+use pocketmine\event\player\PlayerToggleFlightEvent;
 use pocketmine\event\server\DataPacketReceiveEvent;
 use pocketmine\event\server\NetworkInterfaceRegisterEvent;
 use pocketmine\network\mcpe\NetworkSession;
 use pocketmine\network\mcpe\PacketRateLimiter;
+use pocketmine\network\mcpe\protocol\PlayerAuthInputPacket;
 use pocketmine\network\mcpe\protocol\ScriptMessagePacket;
+use pocketmine\network\mcpe\protocol\types\PlayerAuthInputFlags;
 use pocketmine\network\mcpe\raklib\RakLibInterface;
 use pocketmine\network\query\DedicatedQueryNetworkInterface;
 use pocketmine\player\Player;
@@ -236,6 +237,22 @@ class Oomph extends PluginBase implements Listener {
 	}
 
 	/**
+	 * @param PlayerToggleFlightEvent $event
+	 * @priority HIGHEST
+	 * @ignoreCancelled TRUE
+	 * We do this because for some reason PM doesn't handle it themselves... lmao!
+	 */
+	public function onToggleFlight(PlayerToggleFlightEvent $event): void {
+		$var1 = var_export($event->isFlying(), true);
+		$var2 = var_export($event->getPlayer()->getAllowFlight(), true);
+		$event->getPlayer()->sendMessage("toggled! flying=$var1 allowed=$var2");
+		if ($event->isFlying() && !$event->getPlayer()->getAllowFlight()) {
+			$event->getPlayer()->sendMessage("eat shit");
+			$event->cancel();
+		}
+	}
+
+	/**
 	 * @param PlayerPreLoginEvent $event
 	 * @priority HIGHEST
 	 * @ignoreCancelled true
@@ -318,6 +335,13 @@ class Oomph extends PluginBase implements Listener {
 	public function onClientPacket(DataPacketReceiveEvent $event): void {
 		$player = $event->getOrigin()->getPlayer();
 		$packet = $event->getPacket();
+
+		// The fact we even have to do this is stupid LMAO.
+		// Remember to notify dylanthecat!!!
+		if ($packet instanceof PlayerAuthInputPacket && $packet->hasFlag(PlayerAuthInputFlags::START_FLYING) && !$player->getAllowFlight()) {
+			$player?->getNetworkSession()->syncAbilities($player);
+			return;
+		}
 
 		if (!$packet instanceof ScriptMessagePacket) {
 			return;
