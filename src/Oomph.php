@@ -243,8 +243,6 @@ class Oomph extends PluginBase implements Listener {
 	 * We do this because for some reason PM doesn't handle it themselves... lmao!
 	 */
 	public function onToggleFlight(PlayerToggleFlightEvent $event): void {
-		$var1 = var_export($event->isFlying(), true);
-		$var2 = var_export($event->getPlayer()->getAllowFlight(), true);
 		if ($event->isFlying() && !$event->getPlayer()->getAllowFlight()) {
 			$event->cancel();
 		}
@@ -336,8 +334,8 @@ class Oomph extends PluginBase implements Listener {
 
 		// The fact we even have to do this is stupid LMAO.
 		// Remember to notify dylanthecat!!!
-		if ($packet instanceof PlayerAuthInputPacket && $packet->hasFlag(PlayerAuthInputFlags::START_FLYING) && !$player->getAllowFlight()) {
-			$player?->getNetworkSession()->syncAbilities($player);
+		if ($packet instanceof PlayerAuthInputPacket && $packet->hasFlag(PlayerAuthInputFlags::START_FLYING) && !$player?->getAllowFlight()) {
+			$player->getNetworkSession()->syncAbilities($player);
 			return;
 		}
 
