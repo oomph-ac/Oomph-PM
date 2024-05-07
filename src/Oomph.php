@@ -237,20 +237,6 @@ class Oomph extends PluginBase implements Listener {
 	}
 
 	/**
-	 * @param PlayerToggleFlightEvent $event
-	 * @priority HIGHEST
-	 * @ignoreCancelled TRUE
-	 * We do this because for some reason PM doesn't handle it themselves... lmao!
-	 */
-	public function onToggleFlight(PlayerToggleFlightEvent $event): void {
-		$var1 = var_export($event->isFlying(), true);
-		$var2 = var_export($event->getPlayer()->getAllowFlight(), true);
-		if ($event->isFlying() && !$event->getPlayer()->getAllowFlight()) {
-			$event->cancel();
-		}
-	}
-
-	/**
 	 * @param PlayerPreLoginEvent $event
 	 * @priority HIGHEST
 	 * @ignoreCancelled true
@@ -328,16 +314,15 @@ class Oomph extends PluginBase implements Listener {
 	 * @priority HIGHEST
 	 * @param DataPacketReceiveEvent $event
 	 * @return void
-	 * @throws ReflectionException'
-	 */
+     */
 	public function onClientPacket(DataPacketReceiveEvent $event): void {
 		$player = $event->getOrigin()->getPlayer();
 		$packet = $event->getPacket();
 
 		// The fact we even have to do this is stupid LMAO.
 		// Remember to notify dylanthecat!!!
-		if ($packet instanceof PlayerAuthInputPacket && $packet->hasFlag(PlayerAuthInputFlags::START_FLYING) && !$player->getAllowFlight()) {
-			$player?->getNetworkSession()->syncAbilities($player);
+		if ($packet instanceof PlayerAuthInputPacket && $packet->hasFlag(PlayerAuthInputFlags::START_FLYING) && !$player?->getAllowFlight()) {
+			$player->getNetworkSession()->syncAbilities($player);
 			return;
 		}
 
@@ -372,7 +357,7 @@ class Oomph extends PluginBase implements Listener {
 				$netRef = new ReflectionClass(NetworkSession::class);
 				$addrArray = explode(":", $data["address"]);
 				if (str_contains($data["address"], "[") && str_contains($data["address"], "]")) {
-					preg_match('#\[(.*?)\]#', $data["address"], $match);
+					preg_match('#\[(.*?)]#', $data["address"], $match);
 					$netRef->getProperty("ip")->setValue($event->getOrigin(), $match[1] ?? "::1");
 				} else {
 					$netRef->getProperty("ip")->setValue($event->getOrigin(), $addrArray[0]);
