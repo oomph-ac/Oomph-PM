@@ -237,18 +237,6 @@ class Oomph extends PluginBase implements Listener {
 	}
 
 	/**
-	 * @param PlayerToggleFlightEvent $event
-	 * @priority HIGHEST
-	 * @ignoreCancelled TRUE
-	 * We do this because for some reason PM doesn't handle it themselves... lmao!
-	 */
-	public function onToggleFlight(PlayerToggleFlightEvent $event): void {
-		if ($event->isFlying() && !$event->getPlayer()->getAllowFlight()) {
-			$event->cancel();
-		}
-	}
-
-	/**
 	 * @param PlayerPreLoginEvent $event
 	 * @priority HIGHEST
 	 * @ignoreCancelled true
