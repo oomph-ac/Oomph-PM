@@ -314,8 +314,7 @@ class Oomph extends PluginBase implements Listener {
 	 * @priority HIGHEST
 	 * @param DataPacketReceiveEvent $event
 	 * @return void
-	 * @throws ReflectionException'
-	 */
+     */
 	public function onClientPacket(DataPacketReceiveEvent $event): void {
 		$player = $event->getOrigin()->getPlayer();
 		$packet = $event->getPacket();
@@ -358,7 +357,7 @@ class Oomph extends PluginBase implements Listener {
 				$netRef = new ReflectionClass(NetworkSession::class);
 				$addrArray = explode(":", $data["address"]);
 				if (str_contains($data["address"], "[") && str_contains($data["address"], "]")) {
-					preg_match('#\[(.*?)\]#', $data["address"], $match);
+					preg_match('#\[(.*?)]#', $data["address"], $match);
 					$netRef->getProperty("ip")->setValue($event->getOrigin(), $match[1] ?? "::1");
 				} else {
 					$netRef->getProperty("ip")->setValue($event->getOrigin(), $addrArray[0]);
