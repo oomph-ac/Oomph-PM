@@ -27,12 +27,12 @@ Allowed-Connections:
 # COMBAT.
 AutoClicker:
   A:
-    enabled: false
-    max_violations: 25
+    enabled: true
+    max_violations: 20
     punishment: none
   B:
     enabled: false
-    max_violations: 25
+    max_violations: 20
     punishment: none
 KillAura:
   A:
@@ -54,46 +54,36 @@ Hitbox:
     max_violations: 10
     punishment: kick
 
-# MOVEMENT.
-Movement:
+# MOVEMENT
+Fly:
   A:
     enabled: true
-    max_violations: 10
+    max_violations: 20
+    punishment: kick
+Motion:
+  A:
+    enabled: true
+    max_violations: 25
     punishment: kick
   B:
     enabled: true
     max_violations: 10
     punishment: kick
-
   C:
     enabled: true
-    max_violations: 5
+    max_violations: 10
     punishment: kick
 Velocity:
   A:
     enabled: true
-    max_violations: 20
+    max_violations: 5
     punishment: kick
   B:
     enabled: true
-    max_violations: 20
+    max_violations: 5
     punishment: kick
 
 # MISC / VALIDATION
-EditionFaker:
-  A:
-    enabled: true
-    max_violations: 1
-    punishment: kick
-  B:
-    enabled: true
-    max_violations: 1
-    punishment: kick
-Timer:
-  A:
-    enabled: true
-    max_violations: 10
-    punishment: kick
 BadPacket:
   A:
     enabled: true
@@ -106,4 +96,23 @@ BadPacket:
   C:
     enabled: true
     max_violations: 1
+    punishment: kick
+EditionFaker:
+  A:
+    enabled: true
+    max_violations: 1
+    punishment: kick
+  B:
+    enabled: true
+    max_violations: 1
+    punishment: kick
+Scaffold:
+  A:
+    enabled: true
+    max_violations: 5
+    punishment: kick
+Timer:
+  A:
+    enabled: true
+    max_violations: 10
     punishment: kick
