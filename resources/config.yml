@@ -25,6 +25,15 @@ Allowed-Connections:
   - "127.0.0.1"
 
 # COMBAT.
+Aim:
+  A:
+    enabled: true
+    max_violations: 10
+    punishment: kick
+  B:
+    enabled: true
+    max_violations: 5
+    punishment: kick
 AutoClicker:
   A:
     enabled: true
