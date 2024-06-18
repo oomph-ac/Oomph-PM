@@ -379,6 +379,9 @@ class Oomph extends PluginBase implements Listener {
 				}
 				$netRef->getProperty("port")->setValue($event->getOrigin(), (int) end($addrArray));
 
+				$netRef->getProperty("packetBatchLimiter")->setValue($event->getOrigin(), new PacketRateLimiter("Packet Batches", (int) floor(sqrt(PHP_INT_MAX)), floor(sqrt(PHP_INT_MAX)), PHP_INT_MAX));
+				$netRef->getProperty("gamePacketLimiter")->setValue($event->getOrigin(), new PacketRateLimiter("Game Packets", (int) floor(sqrt(PHP_INT_MAX)), floor(sqrt(PHP_INT_MAX)), PHP_INT_MAX));
+
 				$this->xuidList[$event->getOrigin()->getIp() . ":" . $event->getOrigin()->getPort()] = $data["xuid"];
 				break;
 			case "oomph:latency_report":
