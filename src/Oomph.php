@@ -2,6 +2,7 @@
 
 namespace ethaniccc\Oomph;
 
+use cooldogedev\Spectrum\Spectrum;
 use ethaniccc\Oomph\event\OomphPunishmentEvent;
 use ethaniccc\Oomph\event\OomphViolationEvent;
 use ethaniccc\Oomph\session\OomphNetworkSession;
@@ -23,6 +24,7 @@ use pocketmine\event\server\NetworkInterfaceRegisterEvent;
 use pocketmine\network\mcpe\NetworkSession;
 use pocketmine\network\mcpe\PacketRateLimiter;
 use pocketmine\network\mcpe\protocol\PlayerAuthInputPacket;
+use pocketmine\network\mcpe\protocol\ProtocolInfo;
 use pocketmine\network\mcpe\protocol\ScriptMessagePacket;
 use pocketmine\network\mcpe\protocol\types\PlayerAuthInputFlags;
 use pocketmine\network\mcpe\raklib\RakLibInterface;
@@ -54,10 +56,24 @@ class Oomph extends PluginBase implements Listener {
 		"punishment" => "none",
 	];
 
-	private static Oomph $instance;
+	private const DECODE_PACKETS = [
+		ProtocolInfo::CHUNK_RADIUS_UPDATED_PACKET => true,
 
-	/** @var string[] */
-	public array $xuidList = [];
+		ProtocolInfo::UPDATE_BLOCK_PACKET => true,
+		ProtocolInfo::UPDATE_ABILITIES_PACKET => true,
+		ProtocolInfo::UPDATE_ATTRIBUTES_PACKET => true,
+
+		ProtocolInfo::MOVE_ACTOR_ABSOLUTE_PACKET => true,
+		ProtocolInfo::MOVE_PLAYER_PACKET => true,
+
+		ProtocolInfo::SET_ACTOR_MOTION_PACKET => true,
+		ProtocolInfo::SET_ACTOR_DATA_PACKET => true,
+		ProtocolInfo::SET_PLAYER_GAME_TYPE_PACKET => true,
+		
+		ProtocolInfo::LEVEL_EVENT_PACKET => true,
+	];
+
+	private static Oomph $instance;
 
 	public string $alertPermission;
 	public string $logPermission;
@@ -73,21 +89,22 @@ class Oomph extends PluginBase implements Listener {
 			$this->getServer()->forceShutdown();
 		} */
 
+		if (!class_exists(Spectrum::class)) {
+			$this->getLogger()->critical("Spectrum is required for Oomph to function. Don't remove this dependency you fucking skid.");
+			$this->getServer()->shutdown();
+			return;
+		}
+
+		/** @var Spectrum $spectrum */
+		$spectrum = $this->getServer()->getPluginManager()->getPlugin("Spectrum");
+		if ($spectrum === null) {
+			$this->getLogger()->critical("can you skid properly lol?");
+			$this->getServer()->shutdown();
+			return;
+		}
+
 		self::$instance = $this;
-
-		$this->getServer()->getNetwork()->registerInterface(new OomphRakLibInterface($this->getServer(), $this->getServer()->getIp(), $this->getServer()->getPort(), false)); // do we want upstream connection to use ipv6 (tip: we could load balance by having some upstream connections on ipv4 and some on ipv6)
-
-		$this->getServer()->getPluginManager()->registerEvent(NetworkInterfaceRegisterEvent::class, function(NetworkInterfaceRegisterEvent $event) : void{
-			$interface = $event->getInterface();
-			if($interface instanceof OomphRakLibInterface || (!$interface instanceof RakLibInterface && !$interface instanceof DedicatedQueryNetworkInterface)){
-				return;
-			}
-			$this->getLogger()->debug("Prevented network interface " . get_class($interface) . " from being registered");
-			$event->cancel();
-		}, EventPriority::NORMAL, $this);
-
-		if ($this->getConfig()->get("Version", "n/a") !== "1.0.1") {
-			@unlink($this->getDataFolder() . "config.yml");
+		if ($this->getConfig()->get("Version", "n/a") !== "2.0.0") {
 			$this->reloadConfig();
 		}
 
@@ -98,26 +115,6 @@ class Oomph extends PluginBase implements Listener {
 			$this->getLogger()->warning("Oomph set to disabled in config");
 			return;
 		}
-
-		$this->getScheduler()->scheduleDelayedTask(new ClosureTask(function(): void {
-			if ($this->netInterface === null) {
-				foreach ($this->getServer()->getNetwork()->getInterfaces() as $interface) {
-					if ($interface instanceof RakLibInterface) {
-						$this->netInterface = $interface;
-						break;
-					}
-				}
-
-				if ($this->netInterface === null) {
-					throw new AssumptionFailedError("raklib interface not found");
-				}
-				$this->netInterface->setPacketLimit(PHP_INT_MAX); // TODO: not set this to PHP_INT_MAX.
-			}
-
-			$this->getServer()->getCommandMap()->getCommand("oalerts")?->setPermission($this->alertPermission);
-			$this->getServer()->getCommandMap()->getCommand("odelay")?->setPermission($this->alertPermission);
-			$this->getServer()->getCommandMap()->getCommand("ologs")?->setPermission($this->logPermission);
-		}), 1);
 
 		$this->getScheduler()->scheduleRepeatingTask(new ClosureTask(function(): void {
 			$this->alerted = [];
@@ -260,33 +257,6 @@ class Oomph extends PluginBase implements Listener {
 		if ($this->getConfig()->get("Allow-NonOomph-Conn") && $event->getPlayerInfo() instanceof XboxLivePlayerInfo) {
 			return;
 		}
-
-		// Kick the player if data has not been received from Oomph validating their login.
-		if (!isset($this->xuidList["{$event->getIp()}:{$event->getPort()}"])) {
-			$event->setKickFlag(
-				PlayerPreLoginEvent::KICK_FLAG_PLUGIN,
-				"oomph authentication data not found for {$event->getPlayerInfo()->getUsername()}",
-				"failed to initialize session - please try logging in again."
-			);
-			return;
-		}
-
-		$ref = (new ReflectionClass($event))->getProperty("playerInfo");
-		/** @var PlayerInfo $playerInfo */
-		$playerInfo = $ref->getValue($event);
-		$extraData = $playerInfo->getExtraData();
-		$extraData["Xuid"] = $this->xuidList["{$event->getIp()}:{$event->getPort()}"];
-		$extraData["Username"] = $playerInfo->getUsername();
-		$playerInfo = new XboxLivePlayerInfo(
-			$this->xuidList["{$event->getIp()}:{$event->getPort()}"],
-			$playerInfo->getUsername(),
-			$playerInfo->getUuid(),
-			$playerInfo->getSkin(),
-			$playerInfo->getLocale(),
-			$extraData,
-		);
-		$ref->setValue($event, $playerInfo);
-		$event->setAuthRequired(false);
 	}
 
 	/**
@@ -297,22 +267,6 @@ class Oomph extends PluginBase implements Listener {
 	 */
 	public function onLogin(PlayerLoginEvent $event): void {
 		$player = $event->getPlayer();
-		$xuid = $this->xuidList["{$player->getNetworkSession()->getIp()}:{$player->getNetworkSession()->getPort()}"] ?? null;
-		if ($xuid === null) {
-			if ($this->getConfig()->get("Allow-NonOomph-Conn")) {
-				return;
-			}
-
-			$event->setKickMessage("failed to initialize session - please try logging in again.");
-			$event->cancel();
-			return;
-		}
-
-		$ref = new ReflectionClass($player);
-		$ref->getProperty("xuid")->setValue($player, $xuid);
-		$ref->getProperty("authenticated")->setValue($player, true);
-		unset($this->xuidList["{$player->getNetworkSession()->getIp()}:{$player->getNetworkSession()->getPort()}"]);
-
 		OomphSession::register($player);
 	}
 
@@ -334,8 +288,7 @@ class Oomph extends PluginBase implements Listener {
 		$player = $event->getOrigin()->getPlayer();
 		$packet = $event->getPacket();
 
-		// The fact we even have to do this is stupid LMAO.
-		// Remember to notify dylanthecat!!!
+		// Remember to notify dylanthecat to fix this in PM!!!
 		if ($packet instanceof PlayerAuthInputPacket && $packet->hasFlag(PlayerAuthInputFlags::START_FLYING) && !$player->getAllowFlight()) {
 			$player?->getNetworkSession()->syncAbilities($player);
 			return;
@@ -354,36 +307,10 @@ class Oomph extends PluginBase implements Listener {
 		if ($data === null) {
 			return;
 		}
-
 		$event->cancel();
+		
+		// TODO: Use the Spectrum API instead to handle alerts and whatnot.
 		switch ($eventType) {
-			case "oomph:authentication":
-				if ($player !== null) {
-					$this->getLogger()->warning("invalid authentication attempt from {$event->getOrigin()->getIp()}:{$event->getOrigin()->getPort()}");
-					return;
-				}
-
-				if (!$this->getConfig()->get("Allow-NonOomph-Conn") && !in_array($event->getOrigin()->getIp(), $this->getConfig()->get("Allowed-Connections", ["127.0.0.1"]))) {
-					$this->getLogger()->warning("invalid connection from {$event->getOrigin()->getIp()} with XUID " . $data["xuid"]);
-					$event->getOrigin()->disconnect("invalid connection [error: 1]");
-					return;
-				}
-
-				$netRef = new ReflectionClass(NetworkSession::class);
-				$addrArray = explode(":", $data["address"]);
-				if (str_contains($data["address"], "[") && str_contains($data["address"], "]")) {
-					preg_match('#\[(.*?)\]#', $data["address"], $match);
-					$netRef->getProperty("ip")->setValue($event->getOrigin(), $match[1] ?? "::1");
-				} else {
-					$netRef->getProperty("ip")->setValue($event->getOrigin(), $addrArray[0]);
-				}
-				$netRef->getProperty("port")->setValue($event->getOrigin(), (int) end($addrArray));
-
-				$netRef->getProperty("packetBatchLimiter")->setValue($event->getOrigin(), new PacketRateLimiter("Packet Batches", (int) floor(sqrt(PHP_INT_MAX)), floor(sqrt(PHP_INT_MAX)), PHP_INT_MAX));
-				$netRef->getProperty("gamePacketLimiter")->setValue($event->getOrigin(), new PacketRateLimiter("Game Packets", (int) floor(sqrt(PHP_INT_MAX)), floor(sqrt(PHP_INT_MAX)), PHP_INT_MAX));
-
-				$this->xuidList[$event->getOrigin()->getIp() . ":" . $event->getOrigin()->getPort()] = $data["xuid"];
-				break;
 			case "oomph:latency_report":
 				if ($player === null) {
 					return;

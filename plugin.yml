@@ -4,6 +4,7 @@ version: 1.0.0
 main: ethaniccc\Oomph\Oomph
 api: 5.0.0
 src-namespace-prefix: ethaniccc\Oomph
+depend: ["Spectrum"]
 permissions:
   Oomph.Alerts:
     description: Allows access to alerts on Oomph.
