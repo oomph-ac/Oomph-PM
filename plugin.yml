@@ -24,4 +24,5 @@ commands:
     description: Displays the checks that the specified player has failed on Oomph.
     usage: "/ologs <player>"
     permission: "Oomph.Logs"
+depend: Spectrum
 ...
