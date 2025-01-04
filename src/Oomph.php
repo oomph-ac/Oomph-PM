@@ -52,10 +52,12 @@ class Oomph extends PluginBase implements Listener {
 		ProtocolInfo::REMOVE_ACTOR_PACKET ,
 		ProtocolInfo::SET_ACTOR_DATA_PACKET ,
 		ProtocolInfo::SET_ACTOR_MOTION_PACKET ,
+		ProtocolInfo::SET_PLAYER_GAME_TYPE_PACKET,
 		ProtocolInfo::SUB_CHUNK_PACKET ,
 		ProtocolInfo::UPDATE_ABILITIES_PACKET ,
 		ProtocolInfo::UPDATE_ATTRIBUTES_PACKET ,
 		ProtocolInfo::UPDATE_BLOCK_PACKET ,
+		ProtocolInfo::UPDATE_PLAYER_GAME_TYPE_PACKET,
 	];
 
 	private static Oomph $instance;
@@ -264,7 +266,6 @@ class Oomph extends PluginBase implements Listener {
 	public function onClientPacket(DataPacketReceiveEvent $event): void {
 		$player = $event->getOrigin()->getPlayer();
 		$packet = $event->getPacket();
-		$this->getLogger()->debug("packet from client: " . $packet::class);
 
 		// The fact we even have to do this is stupid LMAO.
 		// Remember to notify dylanthecat!!! (i never did, i never will)
@@ -287,7 +288,7 @@ class Oomph extends PluginBase implements Listener {
 
 		$event->cancel();
 		switch ($eventType) {
-			case "oomph:latency_report":
+			/* case "oomph:latency_report":
 				if ($player === null) {
 					return;
 				}
@@ -297,7 +298,7 @@ class Oomph extends PluginBase implements Listener {
 				}
 
 				$player->getNetworkSession()->updatePing((int) $data["raknet"]);
-				break;
+				break; */
 			case "oomph:flagged":
 				if ($player === null) {
 					return;
