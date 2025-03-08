@@ -12,6 +12,7 @@ use pocketmine\command\Command;
 use pocketmine\command\CommandSender;
 use pocketmine\event\EventPriority;
 use pocketmine\event\Listener;
+use pocketmine\event\player\PlayerJoinEvent;
 use pocketmine\event\player\PlayerQuitEvent;
 use pocketmine\event\player\PlayerToggleFlightEvent;
 use pocketmine\event\server\DataPacketReceiveEvent;
@@ -47,6 +48,7 @@ class Oomph extends PluginBase implements Listener {
 		ProtocolInfo::CHUNK_RADIUS_UPDATED_PACKET,
 		ProtocolInfo::INVENTORY_SLOT_PACKET,
 		ProtocolInfo::INVENTORY_CONTENT_PACKET,
+		ProtocolInfo::ITEM_STACK_RESPONSE_PACKET,
 		ProtocolInfo::LEVEL_CHUNK_PACKET ,
 		ProtocolInfo::MOB_ARMOR_EQUIPMENT_PACKET ,
 		ProtocolInfo::MOB_EFFECT_PACKET ,
@@ -70,7 +72,6 @@ class Oomph extends PluginBase implements Listener {
 
 	/** @var OomphSession[] */
 	private array $alerted = [];
-	private ?RakLibInterface $netInterface = null;
 
 	public function onEnable(): void {
 		$spectrum = $this->getServer()->getPluginManager()->getPlugin("Spectrum");
@@ -254,6 +255,10 @@ class Oomph extends PluginBase implements Listener {
 		if ($event->isFlying() && !$event->getPlayer()->getAllowFlight()) {
 			$event->cancel();
 		}
+	}
+
+	public function onJoin(PlayerJoinEvent $event): void {
+		OomphSession::register($event->getPlayer());
 	}
 
 	public function onQuit(PlayerQuitEvent $event): void {
