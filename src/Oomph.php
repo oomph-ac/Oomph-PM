@@ -16,6 +16,7 @@ use pocketmine\event\player\PlayerJoinEvent;
 use pocketmine\event\player\PlayerQuitEvent;
 use pocketmine\event\player\PlayerToggleFlightEvent;
 use pocketmine\event\server\DataPacketReceiveEvent;
+use pocketmine\event\server\DataPacketSendEvent;
 use pocketmine\event\server\NetworkInterfaceRegisterEvent;
 use pocketmine\network\mcpe\protocol\PlayerAuthInputPacket;
 use pocketmine\network\mcpe\protocol\ProtocolInfo;
@@ -27,6 +28,7 @@ use pocketmine\player\Player;
 use pocketmine\plugin\PluginBase;
 use pocketmine\scheduler\ClosureTask;
 use pocketmine\utils\TextFormat;
+use ReflectionClass;
 use ReflectionException;
 
 class Oomph extends PluginBase implements Listener {
@@ -63,6 +65,54 @@ class Oomph extends PluginBase implements Listener {
 		ProtocolInfo::UPDATE_ATTRIBUTES_PACKET ,
 		ProtocolInfo::UPDATE_BLOCK_PACKET ,
 		ProtocolInfo::UPDATE_PLAYER_GAME_TYPE_PACKET,
+
+		ProtocolInfo::START_GAME_PACKET,
+	];
+
+	private const MULTIVERSION_PACKET_DECODE = [
+		ProtocolInfo::CAMERA_AIM_ASSIST_PACKET,
+		ProtocolInfo::CAMERA_PRESETS_PACKET,
+		ProtocolInfo::CONTAINER_REGISTRY_CLEANUP_PACKET,
+		ProtocolInfo::EMOTE_PACKET,
+		ProtocolInfo::INVENTORY_CONTENT_PACKET,
+		ProtocolInfo::INVENTORY_SLOT_PACKET,
+		ProtocolInfo::ITEM_STACK_RESPONSE_PACKET,
+		ProtocolInfo::MOB_EFFECT_PACKET,
+		ProtocolInfo::PLAYER_AUTH_INPUT_PACKET,
+		ProtocolInfo::PLAYER_LIST_PACKET,
+		ProtocolInfo::RESOURCE_PACK_STACK_PACKET,
+		ProtocolInfo::RESOURCE_PACKS_INFO_PACKET,
+		ProtocolInfo::TRANSFER_PACKET,
+		ProtocolInfo::UPDATE_ATTRIBUTES_PACKET,
+		ProtocolInfo::ADD_PLAYER_PACKET,
+		ProtocolInfo::ADD_ACTOR_PACKET,
+		ProtocolInfo::SET_ACTOR_LINK_PACKET,
+		ProtocolInfo::CAMERA_INSTRUCTION_PACKET,
+		ProtocolInfo::CHANGE_DIMENSION_PACKET,
+		ProtocolInfo::CORRECT_PLAYER_MOVE_PREDICTION_PACKET,
+		ProtocolInfo::DISCONNECT_PACKET,
+		ProtocolInfo::EDITOR_NETWORK_PACKET,
+		ProtocolInfo::LEVEL_CHUNK_PACKET,
+		ProtocolInfo::MOB_ARMOR_EQUIPMENT_PACKET,
+		ProtocolInfo::PLAYER_ARMOR_DAMAGE_PACKET,
+		ProtocolInfo::SET_TITLE_PACKET,
+		ProtocolInfo::STOP_SOUND_PACKET,
+		ProtocolInfo::INVENTORY_TRANSACTION_PACKET,
+		ProtocolInfo::ITEM_STACK_REQUEST_PACKET,
+		ProtocolInfo::CRAFTING_DATA_PACKET,
+		ProtocolInfo::CONTAINER_CLOSE_PACKET,
+		ProtocolInfo::TEXT_PACKET,
+		ProtocolInfo::START_GAME_PACKET,
+		ProtocolInfo::CODE_BUILDER_SOURCE_PACKET,
+		ProtocolInfo::ITEM_REGISTRY_PACKET,
+		ProtocolInfo::STRUCTURE_BLOCK_UPDATE_PACKET,
+		ProtocolInfo::AVAILABLE_COMMANDS_PACKET,
+		ProtocolInfo::BOSS_EVENT_PACKET,
+		ProtocolInfo::CAMERA_AIM_ASSIST_PRESETS_PACKET,
+		ProtocolInfo::COMMAND_BLOCK_UPDATE_PACKET,
+		ProtocolInfo::CREATIVE_CONTENT_PACKET,
+		ProtocolInfo::UPDATE_ABILITIES_PACKET,
+		ProtocolInfo::REQUEST_ABILITY_PACKET,
 	];
 
 	private static Oomph $instance;
@@ -79,8 +129,12 @@ class Oomph extends PluginBase implements Listener {
 			throw new \RuntimeException("Oomph-PM requires Spectrum to run.");
 		}
 		foreach (self::OOMPH_PACKET_DECODE as $pkID) {
-			$spectrum->decode[$pkID] = true;
+			$spectrum->interface->setShouldDecodePacket($pkID, true);
 		}
+
+		/* for ($pkId = 1; $pkId <= 322; $pkId++) {
+			$spectrum->interface->setShouldDecodePacket($pkId, true);
+		} */
 
 		self::$instance = $this;
 		/* $this->getServer()->getNetwork()->registerInterface(new OomphRakLibInterface($this->getServer(), $this->getServer()->getIp(), $this->getServer()->getPort(), false)); // do we want upstream connection to use ipv6 (tip: we could load balance by having some upstream connections on ipv4 and some on ipv6)
