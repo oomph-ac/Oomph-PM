@@ -24,6 +24,7 @@ use pocketmine\network\mcpe\protocol\ScriptMessagePacket;
 use pocketmine\network\mcpe\protocol\types\PlayerAuthInputFlags;
 use pocketmine\network\mcpe\raklib\RakLibInterface;
 use pocketmine\network\query\DedicatedQueryNetworkInterface;
+use pocketmine\player\GameMode;
 use pocketmine\player\Player;
 use pocketmine\plugin\PluginBase;
 use pocketmine\scheduler\ClosureTask;
@@ -305,7 +306,7 @@ class Oomph extends PluginBase implements Listener {
 	 * We do this because for some reason PM doesn't handle it themselves... lmao!
 	 */
 	public function onToggleFlight(PlayerToggleFlightEvent $event): void {
-		if ($event->isFlying() && !$event->getPlayer()->getAllowFlight()) {
+		if ($event->isFlying() && !$event->getPlayer()->getAllowFlight() && $event->getPlayer()->getGamemode() !== GameMode::SPECTATOR()) {
 			$event->cancel();
 		}
 	}
@@ -331,7 +332,7 @@ class Oomph extends PluginBase implements Listener {
 		// The fact we even have to do this is stupid LMAO.
 		// Remember to notify dylanthecat!!! (i never did, i never will)
 		if (!$packet instanceof ScriptMessagePacket) {
-			if ($packet instanceof PlayerAuthInputPacket && $packet->getInputFlags()->get(PlayerAuthInputFlags::START_FLYING) && !$player->getAllowFlight()) {
+			if ($packet instanceof PlayerAuthInputPacket && $packet->getInputFlags()->get(PlayerAuthInputFlags::START_FLYING) && !$player->getAllowFlight() && $player->getGamemode() !== GameMode::SPECTATOR()) {
 				$player?->getNetworkSession()->syncAbilities($player);
 			}
 			return;
