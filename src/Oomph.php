@@ -186,17 +186,16 @@ class Oomph extends PluginBase implements Listener {
 		$this->getScheduler()->scheduleRepeatingTask(new ClosureTask(function(): void {
 			$this->alerted = [];
 			foreach ($this->getServer()->getOnlinePlayers() as $player) {
+				$session = OomphSession::get($player);
+				if ($session === null) {
+					continue;
+				}
 				if (!$player->hasPermission($this->alertPermission)) {
 					$session->authorized = false;
 					$session->alertsEnabled = false;
 					continue;
 				}
-
-				$session = OomphSession::get($player);
-				if ($session === null) {
-					continue;
-				}
-				if (!$session->authorized) {
+				if (!$session->authorized && $player->hasPermission($this->alertPermission)) {
 					$session->authorized = true;
 					$session->alertsEnabled = true;
 				}
