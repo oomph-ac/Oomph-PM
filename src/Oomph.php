@@ -132,6 +132,9 @@ class Oomph extends PluginBase implements Listener {
 		foreach (self::OOMPH_PACKET_DECODE as $pkID) {
 			$spectrum->interface->setShouldDecodePacket($pkID, true);
 		}
+		foreach (self::MULTIVERSION_PACKET_DECODE as $pkID) {
+			$spectrum->interface->setShouldDecodePacket($pkID, true);
+		}
 
 		/* for ($pkId = 1; $pkId <= 322; $pkId++) {
 			$spectrum->interface->setShouldDecodePacket($pkId, true);
