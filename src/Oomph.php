@@ -129,16 +129,17 @@ class Oomph extends PluginBase implements Listener {
 		if (!$spectrum instanceof Spectrum) {
 			throw new \RuntimeException("Oomph-PM requires Spectrum to run.");
 		}
-		foreach (self::OOMPH_PACKET_DECODE as $pkID) {
+		
+		/* foreach (self::OOMPH_PACKET_DECODE as $pkID) {
 			$spectrum->interface->setShouldDecodePacket($pkID, true);
 		}
 		foreach (self::MULTIVERSION_PACKET_DECODE as $pkID) {
 			$spectrum->interface->setShouldDecodePacket($pkID, true);
-		}
-
-		/* for ($pkId = 1; $pkId <= 322; $pkId++) {
-			$spectrum->interface->setShouldDecodePacket($pkId, true);
 		} */
+
+		for ($pkId = 0; $pkId <= 1000; $pkId++) {
+			$spectrum->interface->setShouldDecodePacket($pkId, true);
+		}
 
 		self::$instance = $this;
 		/* $this->getServer()->getNetwork()->registerInterface(new OomphRakLibInterface($this->getServer(), $this->getServer()->getIp(), $this->getServer()->getPort(), false)); // do we want upstream connection to use ipv6 (tip: we could load balance by having some upstream connections on ipv4 and some on ipv6)
