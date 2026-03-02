@@ -5,40 +5,31 @@ namespace ethaniccc\Oomph;
 use cooldogedev\Spectrum\Spectrum;
 use ethaniccc\Oomph\event\OomphPunishmentEvent;
 use ethaniccc\Oomph\event\OomphViolationEvent;
-use ethaniccc\Oomph\session\OomphRakLibInterface;
-use ethaniccc\Oomph\session\OomphSession;
 use ethaniccc\Oomph\session\LoggedData;
+use ethaniccc\Oomph\session\OomphSession;
 use pocketmine\command\Command;
 use pocketmine\command\CommandSender;
-use pocketmine\event\EventPriority;
 use pocketmine\event\Listener;
 use pocketmine\event\player\PlayerJoinEvent;
 use pocketmine\event\player\PlayerQuitEvent;
 use pocketmine\event\player\PlayerToggleFlightEvent;
 use pocketmine\event\server\DataPacketDecodeEvent;
 use pocketmine\event\server\DataPacketReceiveEvent;
-use pocketmine\event\server\DataPacketSendEvent;
-use pocketmine\event\server\NetworkInterfaceRegisterEvent;
 use pocketmine\network\mcpe\protocol\PlayerAuthInputPacket;
 use pocketmine\network\mcpe\protocol\ProtocolInfo;
 use pocketmine\network\mcpe\protocol\ScriptMessagePacket;
 use pocketmine\network\mcpe\protocol\types\PlayerAuthInputFlags;
-use pocketmine\network\mcpe\raklib\RakLibInterface;
-use pocketmine\network\query\DedicatedQueryNetworkInterface;
 use pocketmine\player\GameMode;
 use pocketmine\player\Player;
 use pocketmine\plugin\PluginBase;
 use pocketmine\scheduler\ClosureTask;
 use pocketmine\utils\TextFormat;
-use ReflectionClass;
-use ReflectionException;
 
 class Oomph extends PluginBase implements Listener {
 
-	private const VALID_EVENTS = [
-		"oomph:latency_report",
-		"oomph:flagged",
-	];
+    private const VALID_EVENTS = [
+        "oomph:flagged" => true,
+    ];
 
 	private const DEFAULT_CHECK_SETTINGS = [
 		"enabled" => true,
@@ -130,28 +121,12 @@ class Oomph extends PluginBase implements Listener {
 		if (!$spectrum instanceof Spectrum) {
 			throw new \RuntimeException("Oomph-PM requires Spectrum to run.");
 		}
-		
-		/* foreach (self::OOMPH_PACKET_DECODE as $pkID) {
-			$spectrum->interface->setShouldDecodePacket($pkID, true);
-		}
-		foreach (self::MULTIVERSION_PACKET_DECODE as $pkID) {
-			$spectrum->interface->setShouldDecodePacket($pkID, true);
-		} */
 
 		for ($pkId = 0; $pkId <= 1000; $pkId++) {
 			$spectrum->registerPacketDecode($pkId, true);
 		}
 
 		self::$instance = $this;
-		/* $this->getServer()->getNetwork()->registerInterface(new OomphRakLibInterface($this->getServer(), $this->getServer()->getIp(), $this->getServer()->getPort(), false)); // do we want upstream connection to use ipv6 (tip: we could load balance by having some upstream connections on ipv4 and some on ipv6)
-		$this->getServer()->getPluginManager()->registerEvent(NetworkInterfaceRegisterEvent::class, function(NetworkInterfaceRegisterEvent $event) : void{
-			$interface = $event->getInterface();
-			if($interface instanceof OomphRakLibInterface || (!$interface instanceof RakLibInterface && !$interface instanceof DedicatedQueryNetworkInterface)){
-				return;
-			}
-			$this->getLogger()->debug("Prevented network interface " . get_class($interface) . " from being registered");
-			$event->cancel();
-		}, EventPriority::NORMAL, $this); */
 
 		if ($this->getConfig()->get("Version", "n/a") !== "1.0.1") {
 			@unlink($this->getDataFolder() . "config.yml");
@@ -166,28 +141,6 @@ class Oomph extends PluginBase implements Listener {
 			$this->getLogger()->warning("Oomph set to disabled in config");
 			return;
 		}
-
-		/* $this->getScheduler()->scheduleDelayedTask(new ClosureTask(function(): void {
-			if ($this->netInterface === null) {
-				foreach ($this->getServer()->getNetwork()->getInterfaces() as $interface) {
-					if ($interface instanceof RakLibInterface) {
-						$this->netInterface = $interface;
-						break;
-					}
-				}
-
-				if ($this->netInterface === null) {
-					throw new AssumptionFailedError("raklib interface not found");
-				}
-				
-				// TODO: not use PHP_INT_MAX here...
-				$this->netInterface->setPacketLimit(PHP_INT_MAX); // TODO: not set this to PHP_INT_MAX.
-			}
-
-			$this->getServer()->getCommandMap()->getCommand("oalerts")?->setPermission($this->alertPermission);
-			$this->getServer()->getCommandMap()->getCommand("odelay")?->setPermission($this->alertPermission);
-			$this->getServer()->getCommandMap()->getCommand("ologs")?->setPermission($this->logPermission);
-		}), 1); */
 
 		$this->getScheduler()->scheduleRepeatingTask(new ClosureTask(function(): void {
 			$this->alerted = [];
@@ -215,90 +168,90 @@ class Oomph extends PluginBase implements Listener {
 		$this->getServer()->getPluginManager()->registerEvents($this, $this);
 	}
 
-	public function onCommand(CommandSender $sender, Command $command, string $label, array $args): bool {
-		switch ($command->getName()) {
-			case "oalerts":
-			case "odelay":
-				if (!$sender instanceof Player) {
-					return false;
-				}
+    public function onCommand(CommandSender $sender, Command $command, string $label, array $args): bool {
+        switch ($command->getName()) {
+            case "oalerts":
+            case "odelay":
+                if (!$sender instanceof Player) {
+                    return false;
+                }
 
-				if (!$sender->hasPermission($this->alertPermission)) {
-					$sender->sendMessage(TextFormat::RED . "Insufficient permissions");
-					return true;
-				}
+                if (!$sender->hasPermission($this->alertPermission)) {
+                    $sender->sendMessage(TextFormat::RED . "Insufficient permissions");
+                    return true;
+                }
 
-				$session = OomphSession::get($sender);
-				if ($session === null) {
-					$sender->sendMessage(TextFormat::RED . "Unexpected null session.");
-					return true;
-				}
+                $session = OomphSession::get($sender);
+                if ($session === null) {
+                    $sender->sendMessage(TextFormat::RED . "Unexpected null session.");
+                    return true;
+                }
 
-				if ($command->getName() === "oalerts") {
-					$session->alertsEnabled = !$session->alertsEnabled;
-					if ($session->alertsEnabled) {
-						$sender->sendMessage(TextFormat::GREEN . "Alerts enabled.");
-					} else {
-						$sender->sendMessage(TextFormat::RED . "Alerts disabled.");
-					}
-				} else {
-					$delay = max((float) ($args[0] ?? 3), 0.0001);
-					$session->alertDelay = $delay;
-					$sender->sendMessage(TextFormat::GREEN . "Alert delay set to $delay seconds");
-				}
+                if ($command->getName() === "oalerts") {
+                    $session->alertsEnabled = !$session->alertsEnabled;
+                    if ($session->alertsEnabled) {
+                        $sender->sendMessage(TextFormat::GREEN . "Alerts enabled.");
+                    } else {
+                        $sender->sendMessage(TextFormat::RED . "Alerts disabled.");
+                    }
+                } else {
+                    $delay = max((float) ($args[0] ?? 3), 0.0001);
+                    $session->alertDelay = $delay;
+                    $sender->sendMessage(TextFormat::GREEN . "Alert delay set to $delay seconds");
+                }
 
-				return true;
-			case "ologs":
-				if (!$sender->hasPermission($this->logPermission)) {
-					$sender->sendMessage(TextFormat::RED . "Insufficient permissions.");
-					return true;
-				}
+                return true;
+            case "ologs":
+                if (!$sender->hasPermission($this->logPermission)) {
+                    $sender->sendMessage(TextFormat::RED . "Insufficient permissions.");
+                    return true;
+                }
 
-				$arg = $args[0] ?? null;
-				if ($arg === null) {
-					$sender->sendMessage(TextFormat::RED . "Please specify a player to obtain their logs.");
-					return true;
-				}
+                $arg = $args[0] ?? null;
+                if ($arg === null) {
+                    $sender->sendMessage(TextFormat::RED . "Please specify a player to obtain their logs.");
+                    return true;
+                }
 
-				$target = $this->getServer()->getPlayerByPrefix($arg);
-				if ($target === null) {
-					$sender->sendMessage(TextFormat::RED . "Player not found.");
-					return true;
-				}
+                $target = $this->getServer()->getPlayerByPrefix($arg);
+                if ($target === null) {
+                    $sender->sendMessage(TextFormat::RED . "Player not found.");
+                    return true;
+                }
 
-				$data = LoggedData::getInstance()->get($target->getName());
-				if (count($data) === 0) {
-					$sender->sendMessage(str_replace(
-						["{prefix}", "{player}"],
-						[$this->getConfig()->get("Prefix", "§7§l[§eoomph§7]§r"), $target->getName()],
-						$this->getConfig()->get("NoLogMessage", "{prefix} §a{player} has no existing logs.")
-					));
-					return true;
-				}
+                $data = LoggedData::getInstance()->get($target->getName());
+                if (count($data) === 0) {
+                    $sender->sendMessage(str_replace(
+                        ["{prefix}", "{player}"],
+                        [$this->getConfig()->get("Prefix", "§7§l[§eoomph§7]§r"), $target->getName()],
+                        $this->getConfig()->get("NoLogMessage", "{prefix} §a{player} has no existing logs.")
+                    ));
+                    return true;
+                }
 
-				$message = str_replace(
-						["{prefix}", "{player}"],
-						[$this->getConfig()->get("Prefix", "§7§l[§eoomph§7]§r"), $target->getName()],
-						$this->getConfig()->get("StartLogMessage", "{prefix} §5Log summary for §d{player}:")
-					) . PHP_EOL;
-				foreach ($data as $k => $datum) {
-					$message .= str_replace(
-						["{check_main}", "{check_sub}", "{violations}"],
-						[$datum["check_main"], $datum["check_sub"], var_export((float) $datum["violations"], true)],
-						$this->getConfig()->get("LogMessage", "§5{check_main}§7<§d{check_main}§7> §cx{violations}")
-					);
+                $message = str_replace(
+                        ["{prefix}", "{player}"],
+                        [$this->getConfig()->get("Prefix", "§7§l[§eoomph§7]§r"), $target->getName()],
+                        $this->getConfig()->get("StartLogMessage", "{prefix} §5Log summary for §d{player}:")
+                    ) . PHP_EOL;
+                foreach ($data as $k => $datum) {
+                    $message .= str_replace(
+                        ["{check_main}", "{check_sub}", "{violations}"],
+                        [$datum["check_main"], $datum["check_sub"], var_export((float) $datum["violations"], true)],
+                        $this->getConfig()->get("LogMessage", "§5{check_main}§7<§d{check_main}§7> §cx{violations}")
+                    );
 
-					if ($k !== count($data) - 1) {
-						$message .= PHP_EOL;
-					}
-				}
-				$sender->sendMessage($message);
+                    if ($k !== count($data) - 1) {
+                        $message .= PHP_EOL;
+                    }
+                }
+                $sender->sendMessage($message);
 
-				return true;
-		}
+                return true;
+        }
 
-		return false;
-	}
+        return false;
+    }
 
 	public static function getInstance(): Oomph {
 		return self::$instance;
@@ -316,15 +269,24 @@ class Oomph extends PluginBase implements Listener {
 		}
 	}
 
+    /**
+     * @param PlayerJoinEvent $event
+     * @return void
+     */
 	public function onJoin(PlayerJoinEvent $event): void {
 		OomphSession::register($event->getPlayer());
 	}
 
+    /**
+     * @param PlayerQuitEvent $event
+     * @return void
+     */
 	public function onQuit(PlayerQuitEvent $event): void {
 		OomphSession::unregister($event->getPlayer());
 	}
 
     /**
+     * @param DataPacketDecodeEvent $event
      * @priority LOWEST
      * @handleCancelled
      */
@@ -335,8 +297,8 @@ class Oomph extends PluginBase implements Listener {
     }
 
     /**
+     * @param DataPacketReceiveEvent $event
      * @priority HIGHEST
-     * @throws ReflectionException
      */
     public function onClientPacket(DataPacketReceiveEvent $event): void {
         $packet = $event->getPacket();
@@ -356,7 +318,11 @@ class Oomph extends PluginBase implements Listener {
         $eventType = $packet->getMessageId();
         $data = json_decode($packet->getValue(), true);
         if ($data === null) {
-            $this->getLogger()->debug("JSON decode failed [{$eventType}]: " . var_export($packet->getValue(), true));
+            $this->getLogger()->debug("JSON decode failed [$eventType]: " . var_export($packet->getValue(), true));
+            return;
+        }
+
+        if (!isset(self::VALID_EVENTS[$eventType])) {
             return;
         }
 
@@ -381,7 +347,9 @@ class Oomph extends PluginBase implements Listener {
                 }
 
                 $ev->call();
-                if ($ev->isCancelled()) return;
+                if ($ev->isCancelled()) {
+                    return;
+                }
 
                 $message = str_replace(
                     ["{prefix}", "{player}", "{check_main}", "{check_sub}", "{violations}", "{extra_data}"],
@@ -415,14 +383,18 @@ class Oomph extends PluginBase implements Listener {
 
     private function checkForPunishments(Player $player, string $check, string $type, float $violations): void {
         $settings = $this->getConfig()->getNested("$check.$type", self::DEFAULT_CHECK_SETTINGS);
-        $punishment = $settings["punishment"] ?? "none";
 
-        if ($punishment === "none" || $violations < ($settings["max_violations"] ?? 10)) return;
+        $punishment = $settings["punishment"] ?? "none";
+        if ($punishment === "none" || $violations < ($settings["max_violations"] ?? 10)) {
+            return;
+        }
 
         $ev = new OomphPunishmentEvent($player, OomphPunishmentEvent::punishmentTypeFromString($punishment), $check, $type);
         $ev->call();
 
-        if ($ev->isCancelled()) return;
+        if ($ev->isCancelled()) {
+            return;
+        }
 
         $replacePairs = [
             ["{prefix}", "{check_main}", "{check_sub}"],

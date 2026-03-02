@@ -8,8 +8,8 @@ use ReflectionClass;
 use ReflectionException;
 
 final class ReflectionUtils{
-	private static $propCache = [];
-	private static $methCache = [];
+	private static array $propCache = [];
+	private static array $methCache = [];
 
 	/**
 	 * @param string $className
