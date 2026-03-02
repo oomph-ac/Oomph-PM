@@ -15,6 +15,7 @@ use pocketmine\event\Listener;
 use pocketmine\event\player\PlayerJoinEvent;
 use pocketmine\event\player\PlayerQuitEvent;
 use pocketmine\event\player\PlayerToggleFlightEvent;
+use pocketmine\event\server\DataPacketDecodeEvent;
 use pocketmine\event\server\DataPacketReceiveEvent;
 use pocketmine\event\server\DataPacketSendEvent;
 use pocketmine\event\server\NetworkInterfaceRegisterEvent;
@@ -323,118 +324,127 @@ class Oomph extends PluginBase implements Listener {
 		OomphSession::unregister($event->getPlayer());
 	}
 
-	/**
-	 * @priority HIGHEST
-	 * @param DataPacketReceiveEvent $event
-	 * @return void
-	 * @throws ReflectionException
-	 */
-	public function onClientPacket(DataPacketReceiveEvent $event): void {
-		$player = $event->getOrigin()->getPlayer();
-		$packet = $event->getPacket();
+    /**
+     * @priority LOWEST
+     * @handleCancelled
+     */
+    public function onPacketDecode(DataPacketDecodeEvent $event): void {
+        if ($event->getPacketId() === ScriptMessagePacket::NETWORK_ID) {
+            $event->uncancel();
+        }
+    }
 
-		// The fact we even have to do this is stupid LMAO.
-		// Remember to notify dylanthecat!!! (i never did, i never will)
-		if (!$packet instanceof ScriptMessagePacket) {
-			if ($packet instanceof PlayerAuthInputPacket && $packet->getInputFlags()->get(PlayerAuthInputFlags::START_FLYING) && !$player->getAllowFlight() && $player->getGamemode() !== GameMode::SPECTATOR()) {
-				$player?->getNetworkSession()->syncAbilities($player);
-			}
-			return;
-		}
+    /**
+     * @priority HIGHEST
+     * @throws ReflectionException
+     */
+    public function onClientPacket(DataPacketReceiveEvent $event): void {
+        $packet = $event->getPacket();
 
-		$eventType = $packet->getMessageId();
-		if (!in_array($eventType, self::VALID_EVENTS)) {
-			return;
-		}
+        if (!$packet instanceof ScriptMessagePacket) {
+            // The fact we even have to do this is stupid LMAO.
+            // Remember to notify dylanthecat!!! (i never did, i never will)
+            if ($packet instanceof PlayerAuthInputPacket && $packet->getInputFlags()->get(PlayerAuthInputFlags::START_FLYING)) {
+                $player = $event->getOrigin()->getPlayer();
+                if ($player !== null && !$player->getAllowFlight() && $player->getGamemode() !== GameMode::SPECTATOR()) {
+                    $player->getNetworkSession()->syncAbilities($player);
+                }
+            }
+            return;
+        }
 
-		$data = json_decode($packet->getValue(), true);
-		if ($data === null) {
-			return;
-		}
+        $eventType = $packet->getMessageId();
+        $data = json_decode($packet->getValue(), true);
+        if ($data === null) {
+            $this->getLogger()->debug("JSON decode failed [{$eventType}]: " . var_export($packet->getValue(), true));
+            return;
+        }
 
-		$event->cancel();
-		switch ($eventType) {
-			/* case "oomph:latency_report":
-				if ($player === null) {
-					return;
-				}
+        switch ($eventType) {
+            case "oomph:flagged":
+                $player = $event->getOrigin()->getPlayer();
+                if ($player === null || OomphSession::get($player) === null) {
+                    $this->getLogger()->debug("Dropping 'oomph:flagged' — " . ($player === null ? "player is null" : "no OomphSession for {$player->getName()}"));
+                    return;
+                }
 
-				if (OomphSession::get($player) === null) {
-					return;
-				}
+                $event->cancel();
 
-				$player->getNetworkSession()->updatePing((int) $data["raknet"]);
-				break; */
-			case "oomph:flagged":
-				if ($player === null) {
-					return;
-				}
+                $data["violations"] = round($data["violations"], 2);
 
-				if (OomphSession::get($player) === null) {
-					return;
-				}
+                $ev = new OomphViolationEvent($player, $data["check_main"], $data["check_sub"], $data["violations"], $data["extraData"] ?? "");
 
-				$data["violations"] = round($data["violations"], 2);
+                $checkSettings = $this->getConfig()->getNested("{$ev->getCheckName()}.{$ev->getCheckType()}", self::DEFAULT_CHECK_SETTINGS);
+                if (!($checkSettings["enabled"] ?? true)) {
+                    $this->getLogger()->debug("Check '{$ev->getCheckName()}.{$ev->getCheckType()}' disabled, cancelling");
+                    $ev->cancel();
+                }
 
-				$message = $this->getConfig()->get("FlaggedMessage", "{prefix} §d{player} §7flagged §4{check_main} §7(§c{check_sub}§7) §7[§5x{violations}§7] §f{extra_data}");
-				$message = str_replace(
-					["{prefix}", "{player}", "{check_main}", "{check_sub}", "{violations}", "{extra_data}"],
-					[$this->getConfig()->get("Prefix", "§l§7[§eoomph§7]"), $data["player"], $data["check_main"], $data["check_sub"], $data["violations"], $data["extraData"]],
-					$message
-				);
-                $ev = new OomphViolationEvent($player, $data["check_main"], $data["check_sub"], $data["violations"], $data["extraData"] ?? '');
-				if (!$this->getConfig()->getNested("{$ev->getCheckName()}.{$ev->getCheckType()}", self::DEFAULT_CHECK_SETTINGS)["enabled"] ?? true) {
-					$ev->cancel();
-				}
+                $ev->call();
+                if ($ev->isCancelled()) return;
 
-				$ev->call();
-				if (!$ev->isCancelled()) {
-					LoggedData::getInstance()->add($player->getName(), $data);
-					foreach ($this->alerted as $session) {
-						$session->getPlayer()->sendMessage($message);
-						$session->lastAlert = microtime(true);
-					}
+                $message = str_replace(
+                    ["{prefix}", "{player}", "{check_main}", "{check_sub}", "{violations}", "{extra_data}"],
+                    [
+                        $this->getConfig()->get("Prefix", "§l§7[§eoomph§7]"),
+                        $data["player"],
+                        $data["check_main"],
+                        $data["check_sub"],
+                        $data["violations"],
+                        $data["extraData"] ?? "",
+                    ],
+                    $this->getConfig()->get("FlaggedMessage", "{prefix} §d{player} §7flagged §4{check_main} §7(§c{check_sub}§7) §7[§5x{violations}§7] §f{extra_data}")
+                );
 
-					$this->checkForPunishments($player, $ev->getCheckName(), $ev->getCheckType(), $ev->getViolations());
-				}
+                LoggedData::getInstance()->add($player->getName(), $data);
 
-				break;
-		}
-	}
+                $now = microtime(true);
+                foreach ($this->alerted as $session) {
+                    $session->getPlayer()->sendMessage($message);
+                    $session->lastAlert = $now;
+                }
 
-	private function checkForPunishments(Player $player, string $check, string $type, float $violations): void {
-		$settings = $this->getConfig()->getNested("$check.$type", self::DEFAULT_CHECK_SETTINGS);
-		if (($settings["punishment"] ?? "none") === "none" || $violations < ($settings["max_violations"] ?? 10)) {
-			return;
-		}
+                $this->checkForPunishments($player, $ev->getCheckName(), $ev->getCheckType(), $ev->getViolations());
+                break;
 
-		$punishmentType = OomphPunishmentEvent::punishmentTypeFromString($settings["punishment"]);
-		$ev = new OomphPunishmentEvent($player, $punishmentType, $check, $type);
-		$ev->call();
-		if ($ev->isCancelled()) return;
+            default:
+                $this->getLogger()->debug("Rejected unknown event: " . var_export($eventType, true));
+                break;
+        }
+    }
 
-		if ($punishmentType === OomphPunishmentEvent::TYPE_KICK) {
-			$player->kick(str_replace(
-				["{prefix}", "{check_main}", "{check_sub}"],
-				[$this->getPrefix(), $check, $type],
-				$this->getConfig()->get("KickMessage", "{prefix} §cKicked for the usage of third-party software.")
-			));
-			return;
-		}
+    private function checkForPunishments(Player $player, string $check, string $type, float $violations): void {
+        $settings = $this->getConfig()->getNested("$check.$type", self::DEFAULT_CHECK_SETTINGS);
+        $punishment = $settings["punishment"] ?? "none";
 
-		$banMsg =$this->getConfig()->get("BanMessage", "{prefix} §cBanned for the usage of third-party software.");
-		$player->kick(str_replace(
-			["{prefix}", "{check_main}", "{check_sub}"],
-			[$this->getPrefix(), $check, $type],
-			$banMsg,
-		));
-		$this->getServer()->getNameBans()->addBan(
-			$player->getName(), 
-			$banMsg,
-			null, 
-			"Oomph",
-		);
-	}
+        if ($punishment === "none" || $violations < ($settings["max_violations"] ?? 10)) return;
+
+        $ev = new OomphPunishmentEvent($player, OomphPunishmentEvent::punishmentTypeFromString($punishment), $check, $type);
+        $ev->call();
+
+        if ($ev->isCancelled()) return;
+
+        $replacePairs = [
+            ["{prefix}", "{check_main}", "{check_sub}"],
+            [$this->getPrefix(), $check, $type],
+        ];
+
+        $msg = str_replace(
+            $replacePairs[0],
+            $replacePairs[1],
+            $this->getConfig()->get($ev->isKick() ? "KickMessage" : "BanMessage",
+                $ev->isKick()
+                    ? "{prefix} §cKicked for the usage of third-party software."
+                    : "{prefix} §cBanned for the usage of third-party software."
+            )
+        );
+
+        $player->kick($msg);
+
+        if ($ev->isBan()) {
+            $this->getServer()->getNameBans()->addBan($player->getName(), $msg, null, "Oomph");
+        }
+    }
 
 	public function getPrefix(): string {
 		return $this->getConfig()->get("Prefix", "§7§l[§eoomph§7]§r");
