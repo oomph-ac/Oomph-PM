@@ -7,7 +7,6 @@ use pocketmine\event\player\PlayerEvent;
 use pocketmine\player\Player;
 
 final class OomphPunishmentEvent extends PlayerEvent {
-
 	use CancellableTrait;
 
 	public const TYPE_KICK = 0;
