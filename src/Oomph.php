@@ -15,6 +15,7 @@ use pocketmine\event\Listener;
 use pocketmine\event\player\PlayerJoinEvent;
 use pocketmine\event\player\PlayerQuitEvent;
 use pocketmine\event\player\PlayerToggleFlightEvent;
+use pocketmine\event\server\DataPacketDecodeEvent;
 use pocketmine\event\server\DataPacketReceiveEvent;
 use pocketmine\event\server\DataPacketSendEvent;
 use pocketmine\event\server\NetworkInterfaceRegisterEvent;
@@ -322,6 +323,16 @@ class Oomph extends PluginBase implements Listener {
 	public function onQuit(PlayerQuitEvent $event): void {
 		OomphSession::unregister($event->getPlayer());
 	}
+
+    /**
+     * @priority LOWEST
+     * @handleCancelled
+     */
+    public function onPacketDecode(DataPacketDecodeEvent $event): void {
+        if ($event->getPacketId() === ScriptMessagePacket::NETWORK_ID) {
+            $event->uncancel();
+        }
+    }
 
     /**
      * @priority HIGHEST
