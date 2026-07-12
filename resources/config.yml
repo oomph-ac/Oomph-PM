@@ -1,6 +1,11 @@
-Version: "1.0.1"
+Version: "1.1.0"
 Enabled: true
-Allow-NonOomph-Conn: false
+
+# Only Oomph proxy connections at these source addresses may emit detection
+# events. Keep PocketMine's UDP port firewalled from public access as well.
+Trusted-Proxy-Addresses:
+  - "127.0.0.1"
+  - "::1"
 
 # Permission for receiving Oomph alerts.
 Alert-Permission: "Oomph.Alerts"
@@ -20,9 +25,6 @@ LogMessage: "§7- §6Detected for §5{check_main}§7<§d{check_sub}§7> §7[§cx
 
 KickMessage: "{prefix} §cKicked for the usage of third-party software."
 BanMessage: "{prefix} §cBanned for the usage of third-party software."
-
-Allowed-Connections:
-  - "127.0.0.1"
 
 # COMBAT.
 Aim:

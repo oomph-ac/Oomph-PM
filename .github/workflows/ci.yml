@@ -1,0 +1,22 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+      - name: Check PHP syntax
+        run: find src tests -name '*.php' -print0 | xargs -0 -n1 php -l
+      - name: Test adapter contract
+        run: php tests/adapter_test.php
