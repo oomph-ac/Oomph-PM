@@ -34,6 +34,7 @@ assertTrue(str_contains($main, 'get("Allowed-Connections"'), "config migration m
 assertTrue(str_contains($main, 'remove("Allowed-Connections")'), "config migration must rename the obsolete address key");
 assertTrue(str_contains($main, 'in_array($address, $trusted, true)'), "event handling must enforce the trusted proxy boundary");
 assertTrue(!str_contains($main, "PlayerAuthInputPacket"), "adapter packet listener must only handle Oomph events");
+assertTrue(str_contains($main, "nextUntrustedProxyWarningAt"), "untrusted event warnings must be rate limited");
 
 foreach ([
     "/src/session/OomphNetworkSession.php",

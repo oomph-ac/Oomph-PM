@@ -35,6 +35,7 @@ class Oomph extends PluginBase implements Listener {
 
 	/** @var OomphSession[] */
 	private array $alerted = [];
+	private float $nextUntrustedProxyWarningAt = 0.0;
 
 	public function onEnable(): void {
 		self::$instance = $this;
@@ -205,7 +206,11 @@ class Oomph extends PluginBase implements Listener {
 		$eventType = $packet->getMessageId();
 		if (str_starts_with($eventType, "oomph:") && !$this->isTrustedProxy($event->getOrigin()->getIp())) {
 			$event->cancel();
-			$this->getLogger()->warning("Rejected Oomph event from untrusted address " . $event->getOrigin()->getIp());
+			$now = microtime(true);
+			if ($now >= $this->nextUntrustedProxyWarningAt) {
+				$this->getLogger()->warning("Rejected Oomph event from untrusted address " . $event->getOrigin()->getIp());
+				$this->nextUntrustedProxyWarningAt = $now + 60;
+			}
 			return;
 		}
 		$data = json_decode($packet->getValue(), true);
