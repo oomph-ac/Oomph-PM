@@ -195,6 +195,7 @@ class Oomph extends PluginBase implements Listener {
 
     /**
      * @priority HIGHEST
+	 * @handleCancelled
      */
     public function onClientPacket(DataPacketReceiveEvent $event): void {
         $packet = $event->getPacket();
